@@ -167,6 +167,7 @@ local Themes = {
 }
 
 local Theme = Themes[ThemeIndex]
+local VisualFX = {}
 
 --========================================================
 -- GUI HELPERS
@@ -255,11 +256,31 @@ Main.Position = UDim2.new(0, 28, 0.06, 0)
 Main.BackgroundColor3 = Theme.Background
 Main.BorderSizePixel = 0
 Main.Active = true
+Main.ClipsDescendants = true
 Main.Parent = Gui
 
 Corner(Main, 22)
 local MainStroke = Stroke(Main, Theme.Border, 1.6)
 local MainGradient = Gradient(Main, Theme.GradientA, Theme.GradientB)
+
+VisualFX.MainAura = Instance.new("Frame")
+VisualFX.MainAura.Name = "MysticsMainAura"
+VisualFX.MainAura.Position = UDim2.new(0, 0, 0, -22)
+VisualFX.MainAura.Size = UDim2.new(1, 0, 0, 154)
+VisualFX.MainAura.BackgroundColor3 = Theme.Accent2
+VisualFX.MainAura.BackgroundTransparency = 0.94
+VisualFX.MainAura.BorderSizePixel = 0
+VisualFX.MainAura.ZIndex = 1
+VisualFX.MainAura.Parent = Main
+Corner(VisualFX.MainAura, 22)
+VisualFX.MainAuraGradient = Instance.new("UIGradient")
+VisualFX.MainAuraGradient.Rotation = 90
+VisualFX.MainAuraGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.18),
+    NumberSequenceKeypoint.new(0.48, 0.72),
+    NumberSequenceKeypoint.new(1, 1)
+})
+VisualFX.MainAuraGradient.Parent = VisualFX.MainAura
 
 -- Atmospheric particles sit behind the interface controls.
 local Atmosphere = Instance.new("Frame")
@@ -287,6 +308,23 @@ local HeaderGradient = Gradient(
     0
 )
 
+VisualFX.HeaderRule = Instance.new("Frame")
+VisualFX.HeaderRule.Name = "HeaderAccentRule"
+VisualFX.HeaderRule.Position = UDim2.new(0, 18, 1, -3)
+VisualFX.HeaderRule.Size = UDim2.new(1, -36, 0, 1)
+VisualFX.HeaderRule.BackgroundColor3 = Theme.Accent2
+VisualFX.HeaderRule.BackgroundTransparency = 0.28
+VisualFX.HeaderRule.BorderSizePixel = 0
+VisualFX.HeaderRule.Parent = Header
+VisualFX.HeaderRuleGradient = Instance.new("UIGradient")
+VisualFX.HeaderRuleGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(0.18, 0.35),
+    NumberSequenceKeypoint.new(0.82, 0.35),
+    NumberSequenceKeypoint.new(1, 1)
+})
+VisualFX.HeaderRuleGradient.Parent = VisualFX.HeaderRule
+
 --========================================================
 -- LUXURY AMBIENT ANIMATION
 -- Slow gradient movement and a restrained metallic edge pulse.
@@ -312,6 +350,13 @@ local BorderPulseTween = TweenService:Create(
     {Transparency = 0.38}
 )
 BorderPulseTween:Play()
+
+VisualFX.AuraPulse = TweenService:Create(
+    VisualFX.MainAura,
+    TweenInfo.new(5.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+    {BackgroundTransparency = 0.975}
+)
+VisualFX.AuraPulse:Play()
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -155, 0, 30)
@@ -392,7 +437,26 @@ TabBar.Name = "TabBar"
 TabBar.Position = UDim2.fromOffset(14, 101)
 TabBar.Size = UDim2.new(1, -28, 0, 37)
 TabBar.BackgroundTransparency = 1
+TabBar.ZIndex = 3
 TabBar.Parent = Main
+
+VisualFX.TabShell = Instance.new("Frame")
+VisualFX.TabShell.Name = "TabNavigationShell"
+VisualFX.TabShell.Position = TabBar.Position
+VisualFX.TabShell.Size = TabBar.Size
+VisualFX.TabShell.BackgroundColor3 = Theme.Panel
+VisualFX.TabShell.BackgroundTransparency = 0.18
+VisualFX.TabShell.BorderSizePixel = 0
+VisualFX.TabShell.ZIndex = 2
+VisualFX.TabShell.Parent = Main
+Corner(VisualFX.TabShell, 12)
+VisualFX.TabShellStroke = Stroke(VisualFX.TabShell, Theme.Border, 1)
+VisualFX.TabShellStroke.Transparency = 0.58
+VisualFX.TabShellGradient = Gradient(VisualFX.TabShell, Theme.Panel2, Theme.Panel, 90)
+VisualFX.TabShellGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.04),
+    NumberSequenceKeypoint.new(1, 0.20)
+})
 
 local TabLayout = Instance.new("UIListLayout")
 TabLayout.FillDirection = Enum.FillDirection.Horizontal
@@ -408,7 +472,53 @@ PageContainer.Position = UDim2.fromOffset(0, 145)
 PageContainer.Size = UDim2.new(1, 0, 1, -150)
 PageContainer.BackgroundTransparency = 1
 PageContainer.ClipsDescendants = true
+PageContainer.ZIndex = 3
 PageContainer.Parent = Main
+
+VisualFX.ContentShell = Instance.new("Frame")
+VisualFX.ContentShell.Name = "ContentGlassShell"
+VisualFX.ContentShell.Position = UDim2.fromOffset(12, 145)
+VisualFX.ContentShell.Size = UDim2.new(1, -24, 1, -157)
+VisualFX.ContentShell.BackgroundColor3 = Theme.Panel
+VisualFX.ContentShell.BackgroundTransparency = 0.14
+VisualFX.ContentShell.BorderSizePixel = 0
+VisualFX.ContentShell.ZIndex = 1
+VisualFX.ContentShell.Parent = Main
+Corner(VisualFX.ContentShell, 16)
+VisualFX.ContentShellStroke = Stroke(VisualFX.ContentShell, Theme.Border, 1)
+VisualFX.ContentShellStroke.Transparency = 0.62
+VisualFX.ContentShellGradient = Gradient(VisualFX.ContentShell, Theme.Panel2, Theme.Panel, 90)
+VisualFX.ContentShellGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.04),
+    NumberSequenceKeypoint.new(0.58, 0.16),
+    NumberSequenceKeypoint.new(1, 0.08)
+})
+
+VisualFX.ContentSweep = Instance.new("Frame")
+VisualFX.ContentSweep.Name = "ContentAccentSweep"
+VisualFX.ContentSweep.Position = UDim2.fromOffset(18, 8)
+VisualFX.ContentSweep.Size = UDim2.new(1, -36, 0, 2)
+VisualFX.ContentSweep.BackgroundColor3 = Theme.Accent2
+VisualFX.ContentSweep.BackgroundTransparency = 0.12
+VisualFX.ContentSweep.BorderSizePixel = 0
+VisualFX.ContentSweep.ZIndex = 1
+VisualFX.ContentSweep.Parent = VisualFX.ContentShell
+Corner(VisualFX.ContentSweep, 2)
+VisualFX.ContentSweepGradient = Instance.new("UIGradient")
+VisualFX.ContentSweepGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(0.2, 0.38),
+    NumberSequenceKeypoint.new(0.5, 0),
+    NumberSequenceKeypoint.new(0.8, 0.38),
+    NumberSequenceKeypoint.new(1, 1)
+})
+VisualFX.ContentSweepGradient.Offset = Vector2.new(-1, 0)
+VisualFX.ContentSweepGradient.Parent = VisualFX.ContentSweep
+TweenService:Create(
+    VisualFX.ContentSweepGradient,
+    TweenInfo.new(6.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1),
+    {Offset = Vector2.new(1, 0)}
+):Play()
 
 local Pages = {}
 local TabButtons = {}
@@ -460,6 +570,13 @@ local function SelectPage(name)
             stroke.Transparency = selected and 0.05 or 0.55
             stroke.Color = Theme.Border
         end
+        local indicator = button:FindFirstChild("ActiveIndicator")
+        if indicator then
+            TweenService:Create(indicator, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundTransparency = selected and 0 or 1,
+                Size = selected and UDim2.new(0.62, 0, 0, 2) or UDim2.new(0.34, 0, 0, 2)
+            }):Play()
+        end
     end
 end
 
@@ -484,8 +601,29 @@ for index, definition in ipairs(tabDefinitions) do
     tab.Text = definition.Text
     tab.TextSize = 9
     tab.TextColor3 = Theme.Muted
+    tab.ZIndex = 4
     tab.Parent = TabBar
     Corner(tab, 9)
+    local tabScale = Instance.new("UIScale")
+    tabScale.Scale = 1
+    tabScale.Parent = tab
+    local activeIndicator = Instance.new("Frame")
+    activeIndicator.Name = "ActiveIndicator"
+    activeIndicator.AnchorPoint = Vector2.new(0.5, 1)
+    activeIndicator.Position = UDim2.new(0.5, 0, 1, -3)
+    activeIndicator.Size = UDim2.new(0.48, 0, 0, 2)
+    activeIndicator.BackgroundColor3 = Theme.Accent2
+    activeIndicator.BackgroundTransparency = 1
+    activeIndicator.BorderSizePixel = 0
+    activeIndicator.ZIndex = 5
+    activeIndicator.Parent = tab
+    Corner(activeIndicator, 2)
+    tab.MouseEnter:Connect(function()
+        TweenService:Create(tabScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.035}):Play()
+    end)
+    tab.MouseLeave:Connect(function()
+        TweenService:Create(tabScale, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+    end)
     local tabStroke = Stroke(tab, Theme.Border, 1)
     tabStroke.Transparency = 0.42
     TabButtons[definition.Name] = tab
@@ -516,7 +654,14 @@ local function Label(text, height, color)
         or color == Theme.Text and "main"
         or "custom")
     l.Parent = Content
-    Corner(l, 8)
+    Corner(l, 10)
+    local labelStroke = Stroke(l, Theme.Border, 1)
+    labelStroke.Transparency = 0.78
+    local labelGradient = Gradient(l, Theme.Panel2, Theme.Panel, 90)
+    labelGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.06),
+        NumberSequenceKeypoint.new(1, 0.18)
+    })
     local padding = Instance.new("UIPadding")
     padding.PaddingLeft = UDim.new(0, 11)
     padding.PaddingRight = UDim.new(0, 9)
@@ -527,14 +672,14 @@ end
 local function Section(text)
     local holder = Instance.new("Frame")
     holder.Name = "SectionHeading"
-    holder.Size = UDim2.new(1, 0, 0, 30)
+    holder.Size = UDim2.new(1, 0, 0, 33)
     holder.BackgroundTransparency = 1
     holder.Parent = Content
 
     local accent = Instance.new("Frame")
     accent.Name = "AccentBar"
-    accent.Size = UDim2.new(0, 3, 0, 15)
-    accent.Position = UDim2.fromOffset(1, 7)
+    accent.Size = UDim2.new(0, 4, 0, 17)
+    accent.Position = UDim2.fromOffset(1, 6)
     accent.BackgroundColor3 = Theme.Accent2
     accent.BorderSizePixel = 0
     accent.Parent = holder
@@ -543,8 +688,8 @@ local function Section(text)
     local l = Instance.new("TextLabel")
     l.Name = "SectionTitle"
     l.BackgroundTransparency = 1
-    l.Position = UDim2.fromOffset(12, 0)
-    l.Size = UDim2.new(1, -15, 1, 0)
+    l.Position = UDim2.fromOffset(14, 0)
+    l.Size = UDim2.new(1, -17, 0, 19)
     l.Text = string.upper(text)
     l.TextColor3 = Theme.Accent2
     l.Font = Enum.Font.GothamBold
@@ -553,11 +698,24 @@ local function Section(text)
     l.Parent = holder
     l:SetAttribute("MysticsTextRole", "accent")
 
+    local caption = Instance.new("TextLabel")
+    caption.Name = "SectionCaption"
+    caption.BackgroundTransparency = 1
+    caption.Position = UDim2.fromOffset(14, 17)
+    caption.Size = UDim2.new(1, -17, 0, 10)
+    caption.Font = Enum.Font.GothamMedium
+    caption.Text = "MYSTICS  /  LIVE SYSTEM"
+    caption.TextColor3 = Theme.Muted
+    caption.TextSize = 7
+    caption.TextXAlignment = Enum.TextXAlignment.Left
+    caption.Parent = holder
+    caption:SetAttribute("MysticsTextRole", "muted")
+
     local line = Instance.new("Frame")
     line.Name = "SectionRule"
     line.AnchorPoint = Vector2.new(0, 0.5)
-    line.Position = UDim2.new(0, 12, 1, -1)
-    line.Size = UDim2.new(1, -15, 0, 1)
+    line.Position = UDim2.new(0, 14, 1, -1)
+    line.Size = UDim2.new(1, -17, 0, 1)
     line.BackgroundColor3 = Theme.Border
     line.BackgroundTransparency = 0.72
     line.BorderSizePixel = 0
@@ -574,6 +732,7 @@ local function MakeButton(text, callback, color)
     b.TextColor3 = Theme.Text
     b.Font = Enum.Font.GothamBold
     b.TextSize = 11
+    b.TextXAlignment = Enum.TextXAlignment.Left
     b.AutoButtonColor = false
     b.Parent = Content
     b:SetAttribute("MysticsButtonTone", color and "secondary" or "primary")
@@ -585,12 +744,26 @@ local function MakeButton(text, callback, color)
         color and Theme.Panel2 or Theme.Accent,
         color and Theme.Panel or Theme.GradientB, 90)
     buttonGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.06),
+        NumberSequenceKeypoint.new(1, 0.20)
+    })
+    local accentRail = Instance.new("Frame")
+    accentRail.Name = "ButtonAccentRail"
+    accentRail.Size = UDim2.new(0, 3, 1, -14)
+    accentRail.Position = UDim2.fromOffset(7, 7)
+    accentRail.BackgroundColor3 = Theme.Accent2
+    accentRail.BackgroundTransparency = color and 0.35 or 0.04
+    accentRail.BorderSizePixel = 0
+    accentRail.ZIndex = 2
+    accentRail.Parent = b
+    Corner(accentRail, 3)
+    buttonGradient.Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 0.08),
         NumberSequenceKeypoint.new(1, 0.22)
     })
 
     local padding = Instance.new("UIPadding")
-    padding.PaddingLeft = UDim.new(0, 12)
+    padding.PaddingLeft = UDim.new(0, 18)
     padding.PaddingRight = UDim.new(0, 12)
     padding.Parent = b
 
@@ -866,7 +1039,14 @@ local function DashboardCard(order, caption, initial, accentColor)
     card.BackgroundTransparency = 0.08
     card.BorderSizePixel = 0
     card.Parent = StatsDashboard
-    Corner(card, 8)
+    Corner(card, 10)
+    local cardStroke = Stroke(card, Theme.Border, 1)
+    cardStroke.Transparency = 0.78
+    local cardGradient = Gradient(card, Theme.Panel2, Theme.Panel, 90)
+    cardGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.04),
+        NumberSequenceKeypoint.new(1, 0.18)
+    })
     local accent = Instance.new("Frame")
     accent.Size = UDim2.new(0, 3, 1, -12)
     accent.Position = UDim2.fromOffset(6, 6)
@@ -989,8 +1169,9 @@ local function ShowImportPlusPopup(rewardNames)
     popup.Position = UDim2.fromScale(0.5, 0.035)
     popup.Size = UDim2.new(0.88, 0, 0, popupHeight)
     popup.BackgroundColor3 = Theme.Panel
-    popup.BackgroundTransparency = 0.04
+    popup.BackgroundTransparency = 0.025
     popup.BorderSizePixel = 0
+    popup.ClipsDescendants = true
     popup.ZIndex = 100
     popup.Parent = overlay
 
@@ -1008,6 +1189,26 @@ local function ShowImportPlusPopup(rewardNames)
     gradient.Color = ColorSequence.new(Theme.GradientA, Theme.GradientB)
     gradient.Rotation = 35
     gradient.Parent = popup
+
+    local popupSheen = Instance.new("Frame")
+    popupSheen.Name = "PopupGlassSheen"
+    popupSheen.Position = UDim2.fromOffset(1, 1)
+    popupSheen.Size = UDim2.new(1, -2, 0, 56)
+    popupSheen.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    popupSheen.BackgroundTransparency = 0.94
+    popupSheen.BorderSizePixel = 0
+    popupSheen.ZIndex = 100
+    popupSheen.Parent = popup
+    local popupSheenGradient = Instance.new("UIGradient")
+    popupSheenGradient.Rotation = 90
+    popupSheenGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.12),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    popupSheenGradient.Parent = popupSheen
+    local popupSheenCorner = Instance.new("UICorner")
+    popupSheenCorner.CornerRadius = UDim.new(0, 16)
+    popupSheenCorner.Parent = popupSheen
 
     local scale = Instance.new("UIScale")
     scale.Scale = 0.72
@@ -2187,6 +2388,11 @@ local function ApplyTheme()
 
     Main.BackgroundColor3 = Theme.Background
     Header.BackgroundColor3 = Theme.Panel
+    VisualFX.MainAura.BackgroundColor3 = Theme.Accent2
+    VisualFX.HeaderRule.BackgroundColor3 = Theme.Accent2
+    VisualFX.TabShell.BackgroundColor3 = Theme.Panel
+    VisualFX.ContentShell.BackgroundColor3 = Theme.Panel
+    VisualFX.ContentSweep.BackgroundColor3 = Theme.Accent2
 
     Title.TextColor3 = Theme.Text
     Subtitle.TextColor3 = Theme.Muted
@@ -2270,6 +2476,10 @@ local function ApplyTheme()
     for _, page in pairs(Pages) do
         page.ScrollBarImageColor3 = Theme.Accent
     end
+    VisualFX.MainAuraGradient.Color = ColorSequence.new(Theme.Accent2, Theme.Background)
+    VisualFX.HeaderRuleGradient.Color = ColorSequence.new(Theme.Accent2, Theme.Border)
+    VisualFX.TabShellGradient.Color = ColorSequence.new(Theme.Panel2, Theme.Panel)
+    VisualFX.ContentShellGradient.Color = ColorSequence.new(Theme.Panel2, Theme.Panel)
     SelectPage(CurrentPageName)
 end
 
