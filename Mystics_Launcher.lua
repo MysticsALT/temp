@@ -93,13 +93,13 @@ Background.Name = "Background"
 Background.AnchorPoint = Vector2.new(0.5, 0.5)
 Background.Position = UDim2.fromScale(0.5, 0.5)
 Background.Size = UDim2.new(0, 448, 0, 550)
-Background.BackgroundColor3 = Color3.fromRGB(8, 2, 5)
+Background.BackgroundColor3 = Color3.fromRGB(24, 8, 15)
 Background.BorderSizePixel = 0
 Background.ClipsDescendants = true
 Background.Parent = HubGui
 AddCorner(Background, 24)
 HubVisual.Stroke = AddStroke(Background, Color3.fromRGB(155, 48, 72), 1.6, 0.04)
-HubVisual.Gradient = AddGradient(Background, Color3.fromRGB(25, 4, 10), Color3.fromRGB(12, 2, 6), 90)
+HubVisual.Gradient = AddGradient(Background, Color3.fromRGB(67, 17, 33), Color3.fromRGB(28, 9, 19), 90)
 
 HubVisual.Ambient = Instance.new("Frame")
 HubVisual.Ambient.Name = "HubAmbient"
@@ -114,8 +114,8 @@ HubVisual.TopAura = Instance.new("Frame")
 HubVisual.TopAura.Name = "RubyTopAura"
 HubVisual.TopAura.Position = UDim2.new(0, -18, 0, -28)
 HubVisual.TopAura.Size = UDim2.new(1, 36, 0, 150)
-HubVisual.TopAura.BackgroundColor3 = Color3.fromRGB(155, 25, 57)
-HubVisual.TopAura.BackgroundTransparency = 0.88
+HubVisual.TopAura.BackgroundColor3 = Color3.fromRGB(225, 55, 94)
+HubVisual.TopAura.BackgroundTransparency = 0.79
 HubVisual.TopAura.BorderSizePixel = 0
 HubVisual.TopAura.ZIndex = 1
 HubVisual.TopAura.Parent = HubVisual.Ambient
@@ -182,11 +182,11 @@ local HubPositionTween = TweenService:Create(
 local Header = Instance.new("Frame")
 Header.Name = "Header"
 Header.Size = UDim2.new(1, 0, 0, 150)
-Header.BackgroundColor3 = Color3.fromRGB(42, 6, 15)
+Header.BackgroundColor3 = Color3.fromRGB(91, 22, 43)
 Header.BorderSizePixel = 0
 Header.Parent = Background
 AddCorner(Header, 18)
-AddGradient(Header, Color3.fromRGB(98, 9, 28), Color3.fromRGB(25, 4, 10), 0)
+AddGradient(Header, Color3.fromRGB(151, 31, 63), Color3.fromRGB(65, 16, 34), 0)
 Header.BackgroundTransparency = 1
 local HubHeaderTween = TweenService:Create(
     Header,
@@ -197,7 +197,7 @@ local HubHeaderTween = TweenService:Create(
 local HeaderCover = Instance.new("Frame")
 HeaderCover.Position = UDim2.new(0, 0, 1, -18)
 HeaderCover.Size = UDim2.new(1, 0, 0, 18)
-HeaderCover.BackgroundColor3 = Color3.fromRGB(25, 4, 10)
+HeaderCover.BackgroundColor3 = Color3.fromRGB(65, 16, 34)
 HeaderCover.BorderSizePixel = 0
 HeaderCover.Parent = Header
 
@@ -288,7 +288,7 @@ for i, chipInfo in ipairs({
     chip.Name = "LauncherChip" .. i
     chip.Position = UDim2.fromOffset((i - 1) * 122, 0)
     chip.Size = UDim2.fromOffset(chipInfo[2], 20)
-    chip.BackgroundColor3 = Color3.fromRGB(20, 5, 11)
+    chip.BackgroundColor3 = Color3.fromRGB(76, 23, 42)
     chip.BackgroundTransparency = 0.12
     chip.BorderSizePixel = 0
     chip.Parent = HubVisual.ChipRow
@@ -391,8 +391,8 @@ local function CreateHubButton(label, order, isPrimary, callback)
     button.LayoutOrder = order
     button.Size = UDim2.new(1, 0, 0, 47)
     button.BackgroundColor3 = isPrimary
-        and Color3.fromRGB(82, 7, 23)
-        or Color3.fromRGB(25, 4, 10)
+        and Color3.fromRGB(153, 31, 64)
+        or Color3.fromRGB(62, 20, 36)
     button.BorderSizePixel = 0
     button.AutoButtonColor = true
     button.Font = Enum.Font.GothamSemibold
@@ -424,7 +424,7 @@ local function CreateHubButton(label, order, isPrimary, callback)
     statePill.AnchorPoint = Vector2.new(1, 0.5)
     statePill.Position = UDim2.new(1, -12, 0.5, 0)
     statePill.Size = UDim2.fromOffset(58, 21)
-    statePill.BackgroundColor3 = isPrimary and Color3.fromRGB(112, 18, 42) or Color3.fromRGB(31, 8, 16)
+    statePill.BackgroundColor3 = isPrimary and Color3.fromRGB(181, 47, 82) or Color3.fromRGB(91, 31, 52)
     statePill.BackgroundTransparency = 0.12
     statePill.BorderSizePixel = 0
     statePill.Parent = button
@@ -442,8 +442,8 @@ local function CreateHubButton(label, order, isPrimary, callback)
     statePillText.Parent = statePill
 
     local buttonGradient = AddGradient(button,
-        isPrimary and Color3.fromRGB(75, 8, 25) or Color3.fromRGB(26, 5, 11),
-        isPrimary and Color3.fromRGB(34, 4, 13) or Color3.fromRGB(13, 2, 6), 90)
+        isPrimary and Color3.fromRGB(166, 37, 73) or Color3.fromRGB(88, 29, 49),
+        isPrimary and Color3.fromRGB(91, 21, 45) or Color3.fromRGB(47, 15, 29), 90)
     buttonGradient.Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 0.04),
         NumberSequenceKeypoint.new(1, 0.16)
@@ -481,8 +481,8 @@ local function CreateHubButton(label, order, isPrimary, callback)
         if button.Parent then
             TweenService:Create(button, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                 BackgroundColor3 = isPrimary
-                    and Color3.fromRGB(125, 15, 38)
-                    or Color3.fromRGB(42, 6, 15)
+                    and Color3.fromRGB(190, 48, 88)
+                    or Color3.fromRGB(105, 34, 59)
             }):Play()
             TweenService:Create(buttonScale, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                 Scale = 1.018
@@ -598,7 +598,7 @@ Footer.Position = UDim2.new(0.5, 0, 1, -14)
 Footer.Size = UDim2.new(1, -30, 0, 18)
 Footer.Font = Enum.Font.Gotham
 Footer.Text = "M Y S T I C S     /     ON-DEMAND EXPERIENCE LOADER"
-Footer.TextColor3 = Color3.fromRGB(166, 99, 114)
+Footer.TextColor3 = Color3.fromRGB(215, 157, 173)
 Footer.TextSize = 8
 Footer.Parent = Background
 
