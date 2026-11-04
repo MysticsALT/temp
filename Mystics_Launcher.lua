@@ -396,17 +396,41 @@ local function CreateHubButton(label, order, isPrimary, callback)
     button.BorderSizePixel = 0
     button.AutoButtonColor = true
     button.Font = Enum.Font.GothamSemibold
+    local buttonIcons = {"📦", "🎁", "💎", "🏆", "📊", "⚙️"}
     button.Text = label
     button.TextColor3 = isPrimary
-        and Color3.fromRGB(255, 245, 247)
-        or Color3.fromRGB(205, 165, 175)
+        and Color3.fromRGB(255, 250, 251)
+        or Color3.fromRGB(239, 207, 216)
     button.TextSize = 13
     button.TextXAlignment = Enum.TextXAlignment.Left
     button.Parent = List
     button.AutoButtonColor = false
     AddCorner(button, 14)
+
+    local iconBadge = Instance.new("Frame")
+    iconBadge.Name = "EmojiIconBadge"
+    iconBadge.Position = UDim2.new(0, 14, 0.5, -16)
+    iconBadge.Size = UDim2.fromOffset(32, 32)
+    iconBadge.BackgroundColor3 = isPrimary and Color3.fromRGB(210, 70, 108) or Color3.fromRGB(119, 43, 72)
+    iconBadge.BackgroundTransparency = 0.12
+    iconBadge.BorderSizePixel = 0
+    iconBadge.ZIndex = 3
+    iconBadge.Parent = button
+    AddCorner(iconBadge, 10)
+    AddStroke(iconBadge, Color3.fromRGB(255, 174, 194), 1, 0.62)
+
+    local emoji = Instance.new("TextLabel")
+    emoji.Name = "MenuEmoji"
+    emoji.BackgroundTransparency = 1
+    emoji.Size = UDim2.fromScale(1, 1)
+    emoji.Font = Enum.Font.Gotham
+    emoji.Text = buttonIcons[order] or "✨"
+    emoji.TextSize = 19
+    emoji.ZIndex = 4
+    emoji.Parent = iconBadge
+
     local buttonPadding = Instance.new("UIPadding")
-    buttonPadding.PaddingLeft = UDim.new(0, 22)
+    buttonPadding.PaddingLeft = UDim.new(0, 58)
     buttonPadding.PaddingRight = UDim.new(0, 104)
     buttonPadding.Parent = button
 
@@ -584,12 +608,12 @@ LaunchRLCrateUnboxing = function()
     return chunk()
 end
 
-RLCrateButton = CreateHubButton("✦   RL Crate Unboxing", 1, true, LaunchSelectedExperience)
-CreateHubButton("◈   Hub Slot 02  —  Coming Soon", 2, false, nil)
-CreateHubButton("◇   Hub Slot 03  —  Coming Soon", 3, false, nil)
-CreateHubButton("✧   Hub Slot 04  —  Coming Soon", 4, false, nil)
-CreateHubButton("◆   Hub Slot 05  —  Coming Soon", 5, false, nil)
-CreateHubButton("✦   Hub Slot 06  —  Coming Soon", 6, false, nil)
+RLCrateButton = CreateHubButton("RL Crate Unboxing", 1, true, LaunchSelectedExperience)
+CreateHubButton("Reward Collection  —  Coming Soon", 2, false, nil)
+CreateHubButton("Premium Items  —  Coming Soon", 3, false, nil)
+CreateHubButton("Achievements  —  Coming Soon", 4, false, nil)
+CreateHubButton("Statistics  —  Coming Soon", 5, false, nil)
+CreateHubButton("Settings  —  Coming Soon", 6, false, nil)
 
 local Footer = Instance.new("TextLabel")
 Footer.BackgroundTransparency = 1
