@@ -1,18 +1,28 @@
-# Mystics Hub
+# Mystics V3.0
 
-The launcher is the only script that should be executed directly. It creates the Mystics Hub UI and does not load the RL Crate experience during startup.
+A premium two-stage launcher and Rocket League crate interface.
 
-## Launch
+## Run Mystics
+
+Execute only the launcher:
 
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/MysticsALT/temp/main/Mystics_Launcher.lua"))()
 ```
 
-## On-demand RL Crate loading
+## Startup and on-demand loading
 
-- Click **RL Crate Unboxing** in the hub.
-- The launcher downloads `RLCrate.lua` from a pinned GitHub commit.
-- It checks that the response is a complete Mystics RL Crate module, compiles it, and then runs it.
-- If download or compilation fails, the hub stays open and the button can be retried.
+- Startup creates only the Mystics Hub launcher.
+- The RL Crate experience is not downloaded or initialized at startup.
+- Clicking **RL Crate Unboxing** downloads `RLCrate.lua` from the immutable commit pinned in `Mystics_Launcher.lua`.
+- The launcher checks the response, compiles it, and then executes it.
+- If loading fails, the hub remains available and the button can be retried.
 
-The module pin is stored in `Mystics_Launcher.lua`. Updating the module requires deliberately changing that commit SHA.
+## Files
+
+- `Mystics_Launcher.lua` — premium hub, launcher UI and lazy loader.
+- `RLCrate.lua` — RL Crate interface, themes, statistics and automation.
+- `backups/Mystics_Launcher_pre_V3.lua` — pre-refresh launcher backup.
+- `backups/RLCrate_pre_V3.lua` — pre-refresh crate module backup.
+
+The V3 refresh is cosmetic. Core reward detection, value tracking, automation and Anti-AFK logic were intentionally left unchanged.
