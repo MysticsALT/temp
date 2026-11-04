@@ -1,7 +1,7 @@
 --========================================================
 -- MYSTICS HUB | MAIN LAUNCHER
--- RL Crate Unboxing opens the existing Mystics script.
--- The other five hub entries are placeholders for future GUIs.
+-- Startup creates only this hub. Experience code is not loaded here.
+-- RL Crate Unboxing is fetched from a pinned GitHub commit only on click.
 --========================================================
 
 if getgenv and getgenv().MysticsCleanup then
@@ -197,7 +197,7 @@ Welcome.BackgroundTransparency = 1
 Welcome.Position = UDim2.new(0, 28, 0, 84)
 Welcome.Size = UDim2.new(1, -52, 0, 28)
 Welcome.Font = Enum.Font.GothamMedium
-Welcome.Text = "Where we cheating today?"
+Welcome.Text = "RL CRATE LOADS ONLY WHEN SELECTED"
 Welcome.TextColor3 = Color3.fromRGB(205, 165, 175)
 Welcome.TextSize = 13
 Welcome.TextXAlignment = Enum.TextXAlignment.Left
@@ -342,7 +342,7 @@ local function LaunchSelectedExperience()
     if HubLaunching or HubClosing or RLCrateLoading then return end
     HubLaunching = true
     RLCrateLoading = true
-    SetRLCrateButtonState("✦   LOADING RL CRATE...", false)
+    SetRLCrateButtonState("✦   DOWNLOADING RL CRATE...", false)
     task.spawn(function()
         local ok, err = pcall(LaunchRLCrateUnboxing)
         if not ok then
@@ -365,19 +365,33 @@ local function LaunchSelectedExperience()
 end
 
 LaunchRLCrateUnboxing = function()
-    local moduleUrl = "https://raw.githubusercontent.com/MysticsALT/temp/141fe14f32fc64008af728ce8cbb81c69d2ab261/RLCrate.lua"
+    -- Immutable commit pin: main-branch changes cannot silently alter this module.
+    local moduleCommit = "141fe14f32fc64008af728ce8cbb81c69d2ab261"
+    local moduleUrl = "https://raw.githubusercontent.com/MysticsALT/temp/" .. moduleCommit .. "/RLCrate.lua"
+
     if type(loadstring) ~= "function" then
         error("This environment does not provide loadstring.")
     end
-    local sourceCode = game:HttpGet(moduleUrl)
-    if type(sourceCode) ~= "string" or #sourceCode < 1000 then
-        error("GitHub returned an empty or incomplete RL Crate module.")
+
+    local downloadOk, sourceCode = pcall(function()
+        return game:HttpGet(moduleUrl)
+    end)
+    if not downloadOk then
+        error("GitHub download failed: " .. tostring(sourceCode))
     end
+
+    if type(sourceCode) ~= "string"
+        or #sourceCode < 1000
+        or not string.find(sourceCode, "MYSTICS | RL CRATE UNBOXING MODULE", 1, true) then
+        error("GitHub returned an empty, incomplete, or unexpected RL Crate module.")
+    end
+
     local chunk, compileError = loadstring(sourceCode, "Mystics_RLCrate")
-    if not chunk then
+    if type(chunk) ~= "function" then
         error("RL Crate compile error: " .. tostring(compileError))
     end
-    chunk()
+
+    return chunk()
 end
 
 RLCrateButton = CreateHubButton("✦   RL Crate Unboxing", 1, true, LaunchSelectedExperience)
@@ -393,7 +407,7 @@ Footer.AnchorPoint = Vector2.new(0.5, 1)
 Footer.Position = UDim2.new(0.5, 0, 1, -14)
 Footer.Size = UDim2.new(1, -30, 0, 18)
 Footer.Font = Enum.Font.Gotham
-Footer.Text = "MYSTICS  •  MULTI-EXPERIENCE HUB"
+Footer.Text = "MYSTICS  •  ON-DEMAND MODULE LOADER"
 Footer.TextColor3 = Color3.fromRGB(145, 85, 98)
 Footer.TextSize = 10
 Footer.Parent = Background
