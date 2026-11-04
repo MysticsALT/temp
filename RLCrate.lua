@@ -102,16 +102,16 @@ local Themes = {
         Icon = "*",
         Tag = "THE OBSIDIAN SIGNATURE COLLECTION",
         Decoration = {"*", "+", "."},
-        Background = Color3.fromRGB(5, 7, 12),
-        Panel = Color3.fromRGB(14, 18, 29),
-        Panel2 = Color3.fromRGB(25, 31, 45),
+        Background = Color3.fromRGB(18, 22, 34),
+        Panel = Color3.fromRGB(32, 40, 57),
+        Panel2 = Color3.fromRGB(48, 59, 80),
         Text = Color3.fromRGB(245, 242, 234),
-        Muted = Color3.fromRGB(154, 164, 181),
-        Accent = Color3.fromRGB(72, 88, 112),
+        Muted = Color3.fromRGB(190, 201, 219),
+        Accent = Color3.fromRGB(103, 128, 164),
         Accent2 = Color3.fromRGB(219, 231, 245),
-        Border = Color3.fromRGB(94, 116, 145),
-        GradientA = Color3.fromRGB(34, 45, 64),
-        GradientB = Color3.fromRGB(5, 7, 12)
+        Border = Color3.fromRGB(130, 158, 195),
+        GradientA = Color3.fromRGB(66, 83, 111),
+        GradientB = Color3.fromRGB(18, 22, 34)
     },
 
     {
@@ -119,16 +119,16 @@ local Themes = {
         Icon = "◆",
         Tag = "THE RUBY COLLECTION",
         Decoration = {"◆", "♦", "✦"},
-        Background = Color3.fromRGB(8, 2, 5),
-        Panel = Color3.fromRGB(25, 4, 10),
-        Panel2 = Color3.fromRGB(42, 6, 15),
+        Background = Color3.fromRGB(30, 8, 17),
+        Panel = Color3.fromRGB(67, 18, 35),
+        Panel2 = Color3.fromRGB(99, 27, 51),
         Text = Color3.fromRGB(255, 245, 247),
-        Muted = Color3.fromRGB(205, 165, 175),
-        Accent = Color3.fromRGB(82, 7, 23),
-        Accent2 = Color3.fromRGB(175, 35, 58),
-        Border = Color3.fromRGB(125, 31, 52),
-        GradientA = Color3.fromRGB(98, 9, 28),
-        GradientB = Color3.fromRGB(12, 2, 6)
+        Muted = Color3.fromRGB(231, 185, 199),
+        Accent = Color3.fromRGB(153, 31, 64),
+        Accent2 = Color3.fromRGB(226, 75, 111),
+        Border = Color3.fromRGB(181, 65, 96),
+        GradientA = Color3.fromRGB(151, 31, 63),
+        GradientB = Color3.fromRGB(30, 8, 17)
     },
 
     {
@@ -136,16 +136,16 @@ local Themes = {
         Icon = "❄",
         Tag = "THE WINTER RESERVE COLLECTION",
         Decoration = {"❄", "✦", "✧"},
-        Background = Color3.fromRGB(3, 16, 23),
-        Panel = Color3.fromRGB(8, 38, 45),
-        Panel2 = Color3.fromRGB(12, 61, 64),
+        Background = Color3.fromRGB(9, 34, 43),
+        Panel = Color3.fromRGB(19, 67, 76),
+        Panel2 = Color3.fromRGB(29, 91, 91),
         Text = Color3.fromRGB(250, 248, 238),
-        Muted = Color3.fromRGB(174, 211, 215),
-        Accent = Color3.fromRGB(128, 20, 31),
+        Muted = Color3.fromRGB(199, 229, 231),
+        Accent = Color3.fromRGB(166, 48, 60),
         Accent2 = Color3.fromRGB(239, 207, 132),
-        Border = Color3.fromRGB(192, 166, 100),
-        GradientA = Color3.fromRGB(16, 91, 82),
-        GradientB = Color3.fromRGB(4, 17, 26)
+        Border = Color3.fromRGB(218, 195, 132),
+        GradientA = Color3.fromRGB(37, 125, 112),
+        GradientB = Color3.fromRGB(9, 34, 43)
     },
 
     {
@@ -153,16 +153,16 @@ local Themes = {
         Icon = "🎃",
         Tag = "THE MIDNIGHT MASQUERADE COLLECTION",
         Decoration = {"🎃", "*", "+"},
-        Background = Color3.fromRGB(12, 5, 20),
-        Panel = Color3.fromRGB(31, 12, 48),
-        Panel2 = Color3.fromRGB(53, 20, 69),
+        Background = Color3.fromRGB(28, 13, 39),
+        Panel = Color3.fromRGB(62, 28, 83),
+        Panel2 = Color3.fromRGB(91, 39, 116),
         Text = Color3.fromRGB(250, 235, 218),
-        Muted = Color3.fromRGB(187, 157, 194),
-        Accent = Color3.fromRGB(151, 55, 14),
+        Muted = Color3.fromRGB(218, 190, 225),
+        Accent = Color3.fromRGB(190, 83, 30),
         Accent2 = Color3.fromRGB(247, 161, 63),
-        Border = Color3.fromRGB(116, 67, 145),
-        GradientA = Color3.fromRGB(83, 29, 108),
-        GradientB = Color3.fromRGB(17, 6, 28)
+        Border = Color3.fromRGB(157, 103, 185),
+        GradientA = Color3.fromRGB(125, 53, 155),
+        GradientB = Color3.fromRGB(28, 13, 39)
     }
 }
 
