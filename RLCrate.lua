@@ -373,7 +373,7 @@ local Subtitle = Instance.new("TextLabel")
 Subtitle.Size = UDim2.new(1, -155, 0, 18)
 Subtitle.Position = UDim2.fromOffset(21, 43)
 Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "Why pay when you're the goat"
+Subtitle.Text = Theme.Tag
 Subtitle.TextColor3 = Theme.Muted
 Subtitle.Font = Enum.Font.Gotham
 Subtitle.TextSize = 11
@@ -384,7 +384,7 @@ local Creator = Instance.new("TextLabel")
 Creator.Size = UDim2.new(1, -155, 0, 17)
 Creator.Position = UDim2.fromOffset(21, 64)
 Creator.BackgroundTransparency = 1
-Creator.Text = "Made by Mystics"
+Creator.Text = "MYSTICS  •  PREMIUM CRATE SUITE"
 Creator.TextColor3 = Theme.Accent2
 Creator.Font = Enum.Font.GothamSemibold
 Creator.TextSize = 10
@@ -2385,6 +2385,7 @@ end
 local function ApplyTheme()
     Theme = Themes[ThemeIndex]
     StartThemeAtmosphere()
+    Subtitle.Text = Theme.Tag
 
     Main.BackgroundColor3 = Theme.Background
     Header.BackgroundColor3 = Theme.Panel
