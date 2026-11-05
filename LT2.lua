@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.5 | Self-contained utility module + opt-in legacy research tests
+-- V2.6 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -257,7 +257,7 @@ Header.Active = true
 stroke(Header)
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V2.5  •  LT2 TOOLKIT + LEGACY TESTS",
+makeLabel(Header, "V2.6  •  LT2 TOOLKIT + LEGACY TESTS",
     UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
@@ -1414,7 +1414,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.5 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.6 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1707,7 +1707,8 @@ end
 local HarvestHeading = section(toolkit, "HIGHLIGHTED TREE HARVEST",
     "2. Harvest highlighted tree and return to your starting position.")
 HarvestHeading.LayoutOrder = -194
-local HarvestStatus = info(toolkit, "HARVEST / IDLE", 122, "text")
+local HarvestStatus = info(toolkit, "HARVEST V2.6 / IDLE", 122, "text")
+warn("[Mystics LT2 V2.6] Harvest diagnostic active; old DRAG REMOTES UNAVAILABLE text is absent.")
 HarvestStatus.Parent.LayoutOrder = -193
 local harvestRunning = false
 local harvestToken = 0
@@ -1943,8 +1944,8 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
             if not dragRemote then
                 local detail = remoteDescription("ClientIsDragging") .. " / "
                     .. remoteDescription("ClientRequestOwnership")
-                failure = "DRAG REMOTE MISSING: " .. detail
-                warn("[Mystics LT2] " .. failure)
+                failure = "V2.6 REMOTE DIAGNOSTIC / " .. detail
+                warn("[Mystics LT2 V2.6] " .. failure)
                 return
             end
             if not ownershipRemote then
@@ -2486,4 +2487,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.5 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v2.6 ready. Historical waypoints are unverified.")
