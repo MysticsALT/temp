@@ -1065,16 +1065,129 @@ local function MakeInput(placeholder, default)
     return box
 end
 
+-- A compact, non-blocking in-menu toast stack. No platform notification
+-- calls, no RenderStepped work, and at most three visible messages.
+VisualFX.ToastHost = Instance.new("Frame")
+VisualFX.ToastHost.Name = "MysticsToastHost"
+VisualFX.ToastHost.AnchorPoint = Vector2.new(1, 0)
+VisualFX.ToastHost.Position = UDim2.new(1, -18, 0, 18)
+VisualFX.ToastHost.Size = UDim2.fromOffset(328, 440)
+VisualFX.ToastHost.BackgroundTransparency = 1
+VisualFX.ToastHost.BorderSizePixel = 0
+VisualFX.ToastHost.ZIndex = 70
+VisualFX.ToastHost.Parent = Gui
+VisualFX.ToastLayout = Instance.new("UIListLayout")
+VisualFX.ToastLayout.SortOrder = Enum.SortOrder.LayoutOrder
+VisualFX.ToastLayout.Padding = UDim.new(0, 8)
+VisualFX.ToastLayout.Parent = VisualFX.ToastHost
+VisualFX.ToastItems = {}
+VisualFX.ToastSequence = 0
+
 local function Notify(message)
-    pcall(function()
-        game:GetService("StarterGui"):SetCore(
-            "SendNotification",
-            {
-                Title = "MYSTICS",
-                Text = message,
-                Duration = 3
-            }
-        )
+    if Destroyed or not VisualFX.ToastHost.Parent then return end
+    message = tostring(message or "")
+    if message == "" then return end
+
+    while #VisualFX.ToastItems >= 3 do
+        local oldest = table.remove(VisualFX.ToastItems, 1)
+        if oldest then oldest:Destroy() end
+    end
+
+    VisualFX.ToastSequence = VisualFX.ToastSequence - 1
+    local low = string.lower(message)
+    local warning = low:find("error", 1, true) or low:find("failed", 1, true)
+        or low:find("not found", 1, true) or low:find("stop", 1, true)
+    local success = low:find("saved", 1, true) or low:find("loaded", 1, true)
+        or low:find("enabled", 1, true) or low:find("reset", 1, true)
+    local accent = warning and Color3.fromRGB(255, 148, 155)
+        or (success and Color3.fromRGB(171, 242, 193) or Theme.Accent2)
+    local titleText = warning and "SYSTEM NOTICE" or (success and "ACTION CONFIRMED" or "MYSTICS")
+    local tall = message:find("\n") and 126 or (string.len(message) > 90 and 90 or 72)
+
+    local wrapper = Instance.new("Frame")
+    wrapper.Name = "ToastSlot"
+    wrapper.Size = UDim2.new(1, 0, 0, tall)
+    wrapper.BackgroundTransparency = 1
+    wrapper.LayoutOrder = VisualFX.ToastSequence
+    wrapper.ZIndex = 70
+    wrapper.Parent = VisualFX.ToastHost
+    table.insert(VisualFX.ToastItems, wrapper)
+
+    local toast = Instance.new("Frame")
+    toast.Name = "PremiumToast"
+    toast.Size = UDim2.fromScale(1, 1)
+    toast.Position = UDim2.fromOffset(45, 0)
+    toast.BackgroundColor3 = Color3.fromRGB(43, 47, 61)
+    toast.BackgroundTransparency = 0.08
+    toast.BorderSizePixel = 0
+    toast.ZIndex = 71
+    toast.Parent = wrapper
+    Corner(toast, 12)
+    local stroke = Stroke(toast, accent, 1.25)
+    stroke.Transparency = 0.2
+
+    local headline = Instance.new("TextLabel")
+    headline.Name = "ToastHeadline"
+    headline.BackgroundTransparency = 1
+    headline.Position = UDim2.fromOffset(14, 9)
+    headline.Size = UDim2.new(1, -28, 0, 14)
+    headline.Font = Enum.Font.GothamBold
+    headline.TextSize = 10
+    headline.Text = titleText
+    headline.TextColor3 = accent
+    headline.TextXAlignment = Enum.TextXAlignment.Left
+    headline.ZIndex = 72
+    headline.Parent = toast
+
+    local content = Instance.new("TextLabel")
+    content.Name = "ToastContent"
+    content.BackgroundTransparency = 1
+    content.Position = UDim2.fromOffset(14, 25)
+    content.Size = UDim2.new(1, -28, 1, -34)
+    content.Font = Enum.Font.GothamMedium
+    content.TextSize = 11
+    content.Text = string.sub(message, 1, 290)
+    content.TextWrapped = true
+    content.TextColor3 = Color3.fromRGB(250, 250, 255)
+    content.TextXAlignment = Enum.TextXAlignment.Left
+    content.TextYAlignment = Enum.TextYAlignment.Top
+    content.ZIndex = 72
+    content.Parent = toast
+
+    local lifespan = 4.2
+    local progress = Instance.new("Frame")
+    progress.Name = "ToastProgress"
+    progress.Position = UDim2.new(0, 13, 1, -5)
+    progress.Size = UDim2.new(1, -26, 0, 2)
+    progress.BackgroundColor3 = accent
+    progress.BorderSizePixel = 0
+    progress.ZIndex = 72
+    progress.Parent = toast
+    Corner(progress, 2)
+    TweenService:Create(toast,
+        TweenInfo.new(0.32, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+        {Position = UDim2.fromOffset(0, 0)}
+    ):Play()
+    TweenService:Create(progress,
+        TweenInfo.new(lifespan, Enum.EasingStyle.Linear),
+        {Size = UDim2.new(0, 0, 0, 2)}
+    ):Play()
+
+    task.delay(lifespan, function()
+        if Destroyed or not wrapper.Parent then return end
+        TweenService:Create(toast,
+            TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+            {Position = UDim2.fromOffset(45, 0), BackgroundTransparency = 1}
+        ):Play()
+        task.delay(0.24, function()
+            for i, item in ipairs(VisualFX.ToastItems) do
+                if item == wrapper then
+                    table.remove(VisualFX.ToastItems, i)
+                    break
+                end
+            end
+            if wrapper.Parent then wrapper:Destroy() end
+        end)
     end)
 end
 
