@@ -1805,7 +1805,7 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
             -- Exclude machinery and loose non-wood objects in PlayerModels.
             return rootName == "LogModels" or name:find("wood",1,true)
                 or name:find("plank",1,true) or name:find("log",1,true)
-                or name:find("loose_",1,true) or (typeValue and typeValue:IsA("ValueBase")) ~= nil
+                or name:find("loose_",1,true) or (typeValue ~= nil and typeValue:IsA("ValueBase"))
         end
         local function inspectOwnedWood(candidate)
             if not active() or not isCutWood(candidate) then return false end
