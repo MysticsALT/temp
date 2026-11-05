@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.17 | Self-contained utility module + opt-in legacy research tests
+-- V2.18 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.17  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.18  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.17",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.18",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1486,6 +1486,133 @@ info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests 
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local toolkit = pages.TOOLS
+--========================================================
+-- WIRE ART STUDIO
+-- Import stroke paths generated from an image, then place them
+-- as LT2 wire segments. Coordinates are normalized 0..1 pairs.
+--========================================================
+section(toolkit, "WIRE ART STUDIO", "Paste image-converted stroke JSON. Stand facing the wall where the artwork should appear.")
+local WireArtStatus = info(toolkit, "WIRE ART / WAITING FOR PATH DATA\nFormat: [[[x,y],[x,y],...], ...] with x/y between 0 and 1.", 78, "text")
+local WireArtInput = Instance.new("TextBox")
+WireArtInput.Name = "MysticsWireArtJSON"
+WireArtInput.Size = UDim2.new(1, 0, 0, 124)
+WireArtInput.BackgroundColor3 = theme().card
+WireArtInput.BorderSizePixel = 0
+WireArtInput.Text = ""
+WireArtInput.PlaceholderText = "Paste converted wire paths JSON here..."
+WireArtInput.PlaceholderColor3 = theme().muted
+WireArtInput.TextColor3 = theme().text
+WireArtInput.Font = Enum.Font.Code
+WireArtInput.TextSize = 11
+WireArtInput.TextXAlignment = Enum.TextXAlignment.Left
+WireArtInput.TextYAlignment = Enum.TextYAlignment.Top
+WireArtInput.TextWrapped = false
+WireArtInput.MultiLine = true
+WireArtInput.ClearTextOnFocus = false
+WireArtInput.Parent = toolkit
+style(WireArtInput, "input")
+corner(WireArtInput, 10)
+stroke(WireArtInput)
+local wirePad = Instance.new("UIPadding")
+wirePad.PaddingLeft = UDim.new(0, 10)
+wirePad.PaddingRight = UDim.new(0, 10)
+wirePad.PaddingTop = UDim.new(0, 8)
+wirePad.Parent = WireArtInput
+
+local function decodeWireArt()
+    local ok, paths = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(WireArtInput.Text)
+    end)
+    if not ok or type(paths) ~= "table" or #paths == 0 then
+        return nil, "Invalid JSON or no wire paths."
+    end
+    if #paths > 80 then return nil, "Maximum 80 separate wire strokes." end
+    local clean, pointTotal = {}, 0
+    for _, path in ipairs(paths) do
+        if type(path) ~= "table" or #path < 2 or #path > 250 then
+            return nil, "Each stroke needs 2-250 coordinate points."
+        end
+        local strokePoints = {}
+        for _, pair in ipairs(path) do
+            if type(pair) ~= "table" or type(pair[1]) ~= "number"
+                or type(pair[2]) ~= "number" or pair[1] < 0 or pair[1] > 1
+                or pair[2] < 0 or pair[2] > 1 then
+                return nil, "Coordinates must be [x,y] numbers between 0 and 1."
+            end
+            strokePoints[#strokePoints+1] = {pair[1],pair[2]}
+            pointTotal += 1
+            if pointTotal > 3000 then return nil, "Maximum 3000 total path points." end
+        end
+        clean[#clean+1] = strokePoints
+    end
+    return clean
+end
+
+makeButton(toolkit, "VALIDATE WIRE ART DATA", function()
+    local paths, err = decodeWireArt()
+    if not paths then WireArtStatus.Text = "WIRE ART / " .. err; return end
+    local points = 0
+    for _, path in ipairs(paths) do points += #path end
+    WireArtStatus.Text = "WIRE ART / DATA VALID\n" .. #paths .. " wire strokes / " .. points .. " points"
+end, "card")
+
+makeButton(toolkit, "PLACE WIRE ART IN FRONT OF ME", function()
+    local paths, err = decodeWireArt()
+    if not paths then WireArtStatus.Text = "WIRE ART / " .. err; return end
+    local character = LocalPlayer.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root then WireArtStatus.Text = "WIRE ART / CHARACTER NOT READY"; return end
+    local replicated = game:GetService("ReplicatedStorage")
+    local placeFolder = replicated:FindFirstChild("PlaceStructure")
+    local remote = placeFolder and placeFolder:FindFirstChild("ClientPlacedWire")
+    local purchasables = replicated:FindFirstChild("Purchasables")
+    local wireInfo = purchasables and purchasables:FindFirstChild("Wire", true)
+    if not remote or not remote:IsA("RemoteEvent") or not wireInfo then
+        WireArtStatus.Text = "WIRE ART / LT2 WIRE PLACEMENT DATA NOT AVAILABLE"; return
+    end
+    local wireItems = {}
+    for _, container in ipairs({LocalPlayer:FindFirstChildOfClass("Backpack"), character}) do
+        if container then
+            for _, item in ipairs(container:GetDescendants()) do
+                if item.Name == "Wire" and (item:IsA("Model") or item:IsA("Tool")) then
+                    wireItems[#wireItems+1] = item
+                end
+            end
+        end
+    end
+    if #wireItems < #paths then
+        WireArtStatus.Text = "WIRE ART / NEED " .. #paths .. " WIRE ITEMS\nFOUND " .. #wireItems
+            .. ". Buy/collect enough Wire items first."
+        return
+    end
+    local width, height, forward = 24, 5.2, 8
+    local origin = root.Position + root.CFrame.LookVector * forward
+        + Vector3.new(0, 2.2, 0) - root.CFrame.RightVector * (width/2)
+    WireArtStatus.Text = "WIRE ART / PLACING 0 OF " .. #paths
+    task.spawn(function()
+        local placed, failed = 0, 0
+        for index, path in ipairs(paths) do
+            if State.closed then break end
+            local worldPoints = {}
+            for _, pair in ipairs(path) do
+                worldPoints[#worldPoints+1] = origin
+                    + root.CFrame.RightVector * (pair[1] * width)
+                    + Vector3.new(0, pair[2] * height, 0)
+            end
+            local ok = pcall(function()
+                remote:FireServer(wireInfo, worldPoints, LocalPlayer, wireItems[index], true)
+            end)
+            if ok then placed += 1 else failed += 1 end
+            WireArtStatus.Text = "WIRE ART / PLACING " .. index .. " OF " .. #paths
+            task.wait(0.12)
+        end
+        if not State.closed then
+            WireArtStatus.Text = "WIRE ART / REQUESTS SENT: " .. placed .. "\nFAILED: " .. failed
+                .. "\nCheck the plot for server-confirmed placement."
+        end
+    end)
+end, "cta")
+
 local buildPage = toolkit
 local toolkitHighlights = {}
 local toolkitSettingsFile = "MysticsLT2_Settings.json"
@@ -2676,4 +2803,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.12 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v2.18 ready. Historical waypoints are unverified.")
