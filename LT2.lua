@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.13 | Self-contained utility module + opt-in legacy research tests
+-- V2.14 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -271,7 +271,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.13  •  REFINED INTERFACE",
+makeLabel(Header, "V2.14  •  REFINED INTERFACE",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -362,7 +362,7 @@ local function info(page, text, height, role)
         UDim2.fromOffset(13, 4), 11, role or "muted", false)
     return l
 end
-local TAB_NAMES = {"TRAVEL", "WOOD", "PLOTS", "PLAYERS", "TOOLS", "BUILD", "UTILS", "DUPES", "STYLE"}
+local TAB_NAMES = {"TRAVEL", "WOOD", "PLOTS", "PLAYERS", "TOOLS", "UTILS", "DUPES", "STYLE"}
 for index, name in ipairs(TAB_NAMES) do
     createPage(name)
     local tab = makeButton(TabBar, name, function()
@@ -1429,7 +1429,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.12 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.14 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1440,7 +1440,7 @@ info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests 
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local toolkit = pages.TOOLS
-local buildPage = pages.BUILD
+local buildPage = toolkit
 local toolkitHighlights = {}
 local toolkitSettingsFile = "MysticsLT2_Settings.json"
 local function clearToolkitHighlights()
@@ -2409,89 +2409,6 @@ makeButton(buildPage,"SCAN MY SAWMILLS",function()
     SawmillResult.Text="OWNED SAWMILLS: "..#mills.."\n"..listText(rows,6)
 end,"cta")
 
-section(buildPage,"BUILD & BLUEPRINT ASSISTANT","Read-only summary of structures on your plot.")
-local BuildResult=info(buildPage,"BUILDINGS  /  NOT SCANNED",115,"text")
-makeButton(buildPage,"INSPECT OWNED STRUCTURES",function()
-    local owned=findModels(function(obj) return ownedModel(obj) end,250)
-    local counts={}
-    for _,obj in ipairs(owned) do
-        local name=shortName(obj)
-        if string.find(string.lower(name),"blueprint",1,true)
-            or string.find(string.lower(name),"wall",1,true)
-            or string.find(string.lower(name),"floor",1,true) then
-            counts[name]=(counts[name] or 0)+1
-        end
-    end
-    local rows={}
-    for name,count in pairs(counts) do rows[#rows+1]=name.." x"..count end
-    table.sort(rows)
-    BuildResult.Text="BLUEPRINT / STRUCTURE TYPES: "..#rows.."\n"..listText(rows,6)
-end,"card")
-
-section(buildPage,"WOOD VALUE ESTIMATOR","Local planning calculator, not a verified market price.")
-local VolumeInput=makeInput(buildPage,"Wood volume in game units","100")
-local PriceInput=makeInput(buildPage,"Estimated price per volume unit","1")
-local ValueResult=info(buildPage,"ESTIMATE  /  ENTER VALUES",58,"text")
-makeButton(buildPage,"CALCULATE ESTIMATED WOOD VALUE",function()
-    local v,p=tonumber(VolumeInput.Text),tonumber(PriceInput.Text)
-    if not v or not p or v<0 or p<0 or v>1e9 or p>1e9 then
-        ValueResult.Text="Enter non-negative volume and price values.";return
-    end
-    ValueResult.Text=string.format("ESTIMATED VALUE: %.2f (%.2f x %.2f)",v*p,v,p)
-end,"cta")
-
-section(buildPage,"SHOP & PURCHASE PLANNER","Browse shop stock; no automatic purchases or remote calls.")
-local ShopResult=info(buildPage,"SHOPS  /  NOT SCANNED",125,"text")
-makeButton(buildPage,"INSPECT REPLICATED SHOP STOCK",function()
-    local shops=Workspace:FindFirstChild("Stores")
-    if not shops then ShopResult.Text="Workspace.Stores unavailable.";return end
-    local rows={}
-    for _,shop in ipairs(shops:GetChildren()) do
-        local count=0
-        for _,child in ipairs(shop:GetDescendants()) do
-            if child:IsA("Model") and child:FindFirstChild("ItemName") then count+=1 end
-            if count>=100 then break end
-        end
-        rows[#rows+1]=shop.Name.." / up to "..count.." visible items"
-    end
-    ShopResult.Text="SHOPS: "..#rows.."\n"..listText(rows,6)
-end,"card")
-
-section(buildPage,"LOCAL MOVEMENT CONTROLS","Reversible client-side values; server may override.")
-local SpeedInput=makeInput(buildPage,"WalkSpeed (8-32)","16")
-local JumpInput=makeInput(buildPage,"JumpPower (25-75)","50")
-local originalMovement=nil
-local function restoreMovement()
-    local hum=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if hum and originalMovement then
-        pcall(function()
-            hum.WalkSpeed=originalMovement.speed
-            hum.JumpPower=originalMovement.jump
-            hum.UseJumpPower=originalMovement.usesJump
-        end)
-    end
-    originalMovement=nil
-end
-State.restoreMovement=restoreMovement
-makeButton(buildPage,"APPLY LOCAL MOVEMENT VALUES",function()
-    local speed,jump=tonumber(SpeedInput.Text),tonumber(JumpInput.Text)
-    if not speed or not jump or speed<8 or speed>32 or jump<25 or jump>75 then
-        notify("WalkSpeed 8-32, JumpPower 25-75.");return
-    end
-    local hum=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if not hum then notify("Humanoid unavailable.");return end
-    if not originalMovement then
-        originalMovement={speed=hum.WalkSpeed,jump=hum.JumpPower,usesJump=hum.UseJumpPower}
-    end
-    hum.UseJumpPower=true
-    hum.WalkSpeed=speed
-    hum.JumpPower=jump
-    notify("Local movement values applied.")
-end,"card")
-makeButton(buildPage,"RESTORE ORIGINAL MOVEMENT",function()
-    restoreMovement()
-    notify("Original movement values restored where available.")
-end,"quiet")
 
 
 --========================================================
@@ -2583,16 +2500,7 @@ makeButton(toolkit, "COUNT VISIBLE WOOD TYPES", function()
         .. "\n" .. listText(rows, 6)
 end, "cta")
 
-section(buildPage, "LOADOUT NOTES", "Keep a short personal note for your next build or shopping trip.")
-local NotesField = makeInput(buildPage, "Project notes (max 180 characters)", "")
-makeButton(buildPage, "SAVE NOTE THIS SESSION", function()
-    State.buildNote = string.sub(NotesField.Text, 1, 180)
-    notify("Build note saved for this session.")
-end, "card")
-makeButton(buildPage, "RESTORE SAVED NOTE", function()
-    NotesField.Text = State.buildNote or ""
-    notify(State.buildNote and "Saved note restored." or "No build note saved.")
-end, "quiet")
+
 
 section(StylePage,"SAVE SETTINGS & WAYPOINTS","Optional executor file API; session-only fallback.")
 makeButton(StylePage,"SAVE MY PREFERENCES",storeSettings,"cta")
