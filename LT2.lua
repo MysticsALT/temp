@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.3 | Self-contained utility module + opt-in legacy research tests
+-- V2.4 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -257,7 +257,7 @@ Header.Active = true
 stroke(Header)
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V2.3  •  LT2 TOOLKIT + LEGACY TESTS",
+makeLabel(Header, "V2.4  •  LT2 TOOLKIT + LEGACY TESTS",
     UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
@@ -1414,7 +1414,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.3 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.4 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1924,10 +1924,17 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
                 failure = "DRAG REMOTES UNAVAILABLE; LOG LEFT AT TREE"
                 return
             end
-            -- Return only fresh cut wood verified as locally owned.
+            -- Transport fresh, verified owned wood only. Some LT2 versions
+            -- expect ClientRequestOwnership to receive the WoodSection, not
+            -- the model, and physics ownership is not the same as item Owner.
             local logs = newOwnedCutWood()
-            local delivered, failed = 0, 0
-            local count = math.min(#logs, 8)
+            table.sort(logs,function(a,b)
+                return ((objectPosition(a) or targetTreePosition)-targetTreePosition).Magnitude
+                    < ((objectPosition(b) or targetTreePosition)-targetTreePosition).Magnitude
+            end)
+            local delivered, failed, noControl = 0, 0, 0
+            local count = math.min(#logs,8)
+            if count == 0 then failure = "NO NEW OWNED LOGS ELIGIBLE FOR RETURN"; return end
             for n=1,count do
                 if not active() then return end
                 local log = logs[n]
@@ -1935,50 +1942,87 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
                 if not log or not log.Parent or not belongsToLocal(log)
                     or not wood or not wood:IsA("BasePart") then
                     failed += 1
+                    HarvestStatus.Text = "HARVEST / SKIPPED WOOD "..n.." (MISSING OR UNOWNED)"
                 else
-                    local destination = startCFrame * CFrame.new(7+n*4, 4, 0)
+                    local destination = startCFrame*CFrame.new(7+n*4,4,0)
                     local oldPrimary = log.PrimaryPart
-                    local success = pcall(function() log.PrimaryPart = wood end)
-                    HarvestStatus.Text = "HARVEST / RETURNING OWNED WOOD " .. n .. "/" .. count
-                    if success then
-                        for frame=1,70 do
-                            if not active() or not log.Parent
-                                or not belongsToLocal(log) then break end
-                            if frame == 1 and character.Parent then
-                                character:PivotTo(CFrame.new(wood.Position + Vector3.new(5,3,5)))
-                            end
-                            pcall(function()
-                                ownershipRemote:FireServer(log)
-                                dragRemote:FireServer(log)
-                                log:PivotTo(destination)
-                                dragRemote:FireServer(log)
-                            end)
-                            task.wait(0.045)
+                    local gotNetworkControl = false
+                    local networkCheckAvailable = type(isnetworkowner) == "function"
+                    -- Request the physical section as well as its assembly.
+                    local requestStart = os.clock()
+                    while active() and os.clock()-requestStart < 5 do
+                        pcall(function() ownershipRemote:FireServer(wood) end)
+                        pcall(function() ownershipRemote:FireServer(log) end)
+                        pcall(function() dragRemote:FireServer(log) end)
+                        if networkCheckAvailable then
+                            local ok, owns = pcall(isnetworkowner,wood)
+                            if ok and owns then gotNetworkControl = true; break end
                         end
-                        task.wait(2.5)
-                        local position = wood.Parent and wood.Position
-                        if position and (position-destination.Position).Magnitude < 18
-                            and belongsToLocal(log) then
-                            delivered += 1
-                        else
-                            failed += 1
+                        task.wait(0.15)
+                    end
+                    if networkCheckAvailable and not gotNetworkControl then
+                        noControl += 1
+                    end
+                    HarvestStatus.Text = "HARVEST / WOOD "..n.."/"..count
+                        ..(gotNetworkControl and " / PHYSICS OWNED" or " / OWNERSHIP UNCERTAIN")
+                    local originalPos = wood.Position
+                    -- Keep the player nearby to maintain physics simulation
+                    -- while the log is moved. Try both the full assembly and
+                    -- physical WoodSection, which LT2 uses as its trunk root.
+                    local movedOnce = false
+                    pcall(function() log.PrimaryPart=wood end)
+                    if character.Parent and humanoid.Health > 0 then
+                        pcall(function()
+                            character:PivotTo(CFrame.new(originalPos+Vector3.new(5,3,5)))
+                        end)
+                    end
+                    task.wait(0.2)
+                    for frame=1,90 do
+                        if not active() or not log.Parent or not wood.Parent
+                            or not belongsToLocal(log) then break end
+                        local succeeded = pcall(function()
+                            ownershipRemote:FireServer(wood)
+                            dragRemote:FireServer(log)
+                            log:PivotTo(destination)
+                            wood.AssemblyLinearVelocity = Vector3.zero
+                            wood.AssemblyAngularVelocity = Vector3.zero
+                            dragRemote:FireServer(log)
+                        end)
+                        if succeeded then movedOnce = true end
+                        if frame % 15 == 0 then
+                            HarvestStatus.Text = "HARVEST / WOOD "..n.."/"..count
+                                .." DRAG "..frame.."/90"
                         end
+                        task.wait(0.05)
+                    end
+                    -- Let replication settle; local movement is only a
+                    -- provisional check and can still be rejected by server.
+                    task.wait(3)
+                    local pos=wood.Parent and wood.Position
+                    local distance=pos and (pos-destination.Position).Magnitude
+                    if movedOnce and distance and distance<18 and belongsToLocal(log) then
+                        delivered += 1
+                        HarvestStatus.Text = "HARVEST / WOOD "..n.." NEAR HOME (LOCAL)"
                     else
                         failed += 1
+                        HarvestStatus.Text = "HARVEST / WOOD "..n
+                            .." SNAPPED BACK OR DRAG FAILED"
                     end
                     pcall(function()
-                        if oldPrimary and oldPrimary.Parent==log then
-                            log.PrimaryPart = oldPrimary
-                        end
+                        if oldPrimary and oldPrimary.Parent==log then log.PrimaryPart=oldPrimary end
                     end)
                 end
             end
-            if delivered ~= count then
-                failure = "WOOD RETURN / "..delivered.." OF "..count..
-                    " CONFIRMED LOCALLY; "..failed.." FAILED"
-                return
+            -- Preserve the actual outcome instead of masking it with a
+            -- generic 'player returned' message when this task finishes.
+            if delivered == count then
+                HarvestStatus.Text = "HARVEST / "..delivered.."/"..count..
+                    " LOGS NEAR START (CLIENT VERIFIED)"
+            else
+                failure = "WOOD RETURN "..delivered.."/"..count..
+                    "; FAILED "..failed..
+                    (noControl>0 and (" / PHYSICS CONTROL UNCONFIRMED "..noControl) or "")
             end
-            HarvestStatus.Text = "HARVEST / "..delivered.." OWNED LOGS AT START (LOCAL CHECK)"
         end)
         for _, listener in ipairs(logListeners) do listener:Disconnect() end
         -- Return the player even if cutting or log movement fails.
@@ -1992,10 +2036,10 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
             harvestRunning = false
             if not State.closed then
                 HarvestStatus.Text = "HARVEST / " ..
-                    (not ok and "ERROR / RETURN REQUESTED" or
-                    failure and (failure .. " / RETURN REQUESTED") or
-                    "PLAYER RETURNED / LOG RETURN ATTEMPTED")
+                    (not ok and "SCRIPT ERROR; SEE CONSOLE" or
+                    failure or "OWNED LOG RETURN ATTEMPT COMPLETE (LOCAL CHECK)")
             end
+            if not ok then warn("[Mystics LT2] Harvest transport error") end
         end
     end)
 end, "cta")
@@ -2417,4 +2461,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.3 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v2.4 ready. Historical waypoints are unverified.")
