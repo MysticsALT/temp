@@ -419,6 +419,8 @@ local function cleanup()
     if State.closed then return end
     State.closed = true
     clearHighlights()
+    if State.clearToolkitHighlights then pcall(State.clearToolkitHighlights) end
+    if State.restoreMovement then pcall(State.restoreMovement) end
     if State.stopDupeTest then pcall(State.stopDupeTest) end
     if State.restoreLighting then pcall(State.restoreLighting) end
     for _, c in ipairs(Connections) do pcall(function() c:Disconnect() end) end
@@ -1412,7 +1414,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.2 • Rebuilt tools and gated legacy tests.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.3 • Rebuilt tools and gated legacy tests.")
 info(StylePage, "BLOOD and public script hubs were reviewed as references. Legacy dupe experiments are opt-in only, not verified, and may harm your in-game save or money. No auto-blacklisting, base wiping or third-party HTTP code.", 130)
 
 
