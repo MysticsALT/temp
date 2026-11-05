@@ -659,30 +659,91 @@ AccessGlow.AnchorPoint = Vector2.new(0.5, 0.5)
 AccessGlow.Position = UDim2.fromScale(0.5, 0.5)
 AccessGlow.Size = UDim2.new(1, -12, 0, 380)
 AccessGlow.BackgroundColor3 = Color3.fromRGB(222, 48, 99)
-AccessGlow.BackgroundTransparency = 0.93
+AccessGlow.BackgroundTransparency = 0.86
 AccessGlow.BorderSizePixel = 0
 AccessGlow.ZIndex = 40
 AccessGlow.Parent = AccessOverlay
 AddCorner(AccessGlow, 40)
 TweenService:Create(AccessGlow,
     TweenInfo.new(4.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-    {BackgroundTransparency = 0.975}
+    {BackgroundTransparency = 0.94}
 ):Play()
 
-for i = 1, 10 do
+for i = 1, 17 do
     local spark = Instance.new("Frame")
     spark.Name = "AccessSpark" .. i
     spark.Size = UDim2.fromOffset(i % 3 == 0 and 4 or 2, i % 3 == 0 and 4 or 2)
     spark.Position = UDim2.fromScale(0.06 + ((i * 23) % 87) / 100, 0.08 + ((i * 17) % 83) / 100)
     spark.BackgroundColor3 = i % 2 == 0 and Color3.fromRGB(255, 178, 202) or Color3.fromRGB(229, 84, 128)
-    spark.BackgroundTransparency = 0.57
+    spark.BackgroundTransparency = 0.36 + (i % 3) * 0.08
     spark.BorderSizePixel = 0
     spark.ZIndex = 40
     spark.Parent = AccessOverlay
     AddCorner(spark, 99)
     TweenService:Create(spark,
         TweenInfo.new(3.5 + i * 0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-        {Position = spark.Position + UDim2.new(0, 0, -0.02, 0), BackgroundTransparency = 0.94}
+        {Position = spark.Position + UDim2.new(0, 0, -(0.045 + (i % 3) * 0.012), 0), BackgroundTransparency = 0.85}
+    ):Play()
+end
+
+-- Animated ambient lights live BEHIND the access card (ZIndex 40).
+-- A small fixed number of tweens, no RenderStepped handlers.
+for i = 1, 2 do
+    local orb = Instance.new("Frame")
+    orb.Name = "AccessFloatingOrb" .. i
+    orb.AnchorPoint = Vector2.new(0.5, 0.5)
+    orb.Size = UDim2.fromOffset(i == 1 and 156 or 128, i == 1 and 156 or 128)
+    orb.Position = UDim2.fromScale(i == 1 and 0.15 or 0.85, i == 1 and 0.20 or 0.80)
+    orb.BackgroundColor3 = i == 1 and Color3.fromRGB(253, 86, 142)
+        or Color3.fromRGB(255, 140, 182)
+    orb.BackgroundTransparency = 0.88
+    orb.BorderSizePixel = 0
+    orb.ZIndex = 40
+    orb.Parent = AccessOverlay
+    AddCorner(orb, 999)
+    local orbGradient = Instance.new("UIGradient")
+    orbGradient.Rotation = i == 1 and 30 or 150
+    orbGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.72),
+        NumberSequenceKeypoint.new(0.42, 0.12),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    orbGradient.Parent = orb
+    TweenService:Create(
+        orb,
+        TweenInfo.new(8 + i * 1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        {
+            Position = UDim2.fromScale(i == 1 and 0.34 or 0.65, i == 1 and 0.32 or 0.66),
+            BackgroundTransparency = 0.95
+        }
+    ):Play()
+end
+
+-- Two slow ruby streaks make the background feel alive without obscuring the PIN.
+for i = 1, 2 do
+    local streak = Instance.new("Frame")
+    streak.Name = "AccessMovingStreak" .. i
+    streak.Position = UDim2.fromScale(0.07, i == 1 and 0.14 or 0.83)
+    streak.Size = UDim2.new(0.86, 0, 0, 2)
+    streak.BackgroundColor3 = Color3.fromRGB(245, 105, 155)
+    streak.BackgroundTransparency = 0.50
+    streak.BorderSizePixel = 0
+    streak.ZIndex = 40
+    streak.Parent = AccessOverlay
+    local streakGradient = Instance.new("UIGradient")
+    streakGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.36, 0.92),
+        NumberSequenceKeypoint.new(0.5, 0.1),
+        NumberSequenceKeypoint.new(0.64, 0.92),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    streakGradient.Offset = Vector2.new(-1, 0)
+    streakGradient.Parent = streak
+    TweenService:Create(
+        streakGradient,
+        TweenInfo.new(5.0 + i * 1.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        {Offset = Vector2.new(1, 0)}
     ):Play()
 end
 
@@ -840,21 +901,80 @@ AccessError.TextSize = 11
 AccessError.ZIndex = 42
 AccessError.Parent = AccessPanel
 
+-- High-contrast button: pale rose with dark burgundy letters.
+-- Avoid UIGradient directly on the TextButton; it darkens its text too.
+local UnlockHalo = Instance.new("Frame")
+UnlockHalo.Name = "UnlockButtonHalo"
+UnlockHalo.Position = UDim2.new(0, 20, 0, 220)
+UnlockHalo.Size = UDim2.new(1, -40, 0, 52)
+UnlockHalo.BackgroundColor3 = Color3.fromRGB(252, 89, 143)
+UnlockHalo.BackgroundTransparency = 0.70
+UnlockHalo.BorderSizePixel = 0
+UnlockHalo.ZIndex = 42
+UnlockHalo.Parent = AccessPanel
+AddCorner(UnlockHalo, 14)
+TweenService:Create(
+    UnlockHalo,
+    TweenInfo.new(2.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+    {BackgroundTransparency = 0.90}
+):Play()
+
 local UnlockButton = Instance.new("TextButton")
 UnlockButton.Name = "UnlockButton"
 UnlockButton.Position = UDim2.new(0, 24, 0, 224)
 UnlockButton.Size = UDim2.new(1, -48, 0, 44)
-UnlockButton.BackgroundColor3 = Color3.fromRGB(194, 48, 91)
+UnlockButton.BackgroundColor3 = Color3.fromRGB(255, 184, 208)
 UnlockButton.BorderSizePixel = 0
-UnlockButton.Font = Enum.Font.GothamBold
-UnlockButton.Text = "UNLOCK HUB"
-UnlockButton.TextColor3 = Color3.fromRGB(255, 247, 250)
-UnlockButton.TextSize = 13
-UnlockButton.AutoButtonColor = true
-UnlockButton.ZIndex = 42
+UnlockButton.Font = Enum.Font.GothamBlack
+UnlockButton.Text = "UNLOCK HERE"
+UnlockButton.TextColor3 = Color3.fromRGB(46, 10, 26)
+UnlockButton.TextSize = 16
+UnlockButton.AutoButtonColor = false
+UnlockButton.ZIndex = 43
 UnlockButton.Parent = AccessPanel
 AddCorner(UnlockButton, 11)
-AddGradient(UnlockButton, Color3.fromRGB(218, 64, 105), Color3.fromRGB(134, 28, 67), 90)
+local UnlockStroke = AddStroke(UnlockButton, Color3.fromRGB(255, 229, 238), 2, 0.04)
+local UnlockScale = Instance.new("UIScale")
+UnlockScale.Scale = 1
+UnlockScale.Parent = UnlockButton
+TweenService:Create(
+    UnlockStroke,
+    TweenInfo.new(2.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+    {Transparency = 0.40}
+):Play()
+
+UnlockButton.MouseEnter:Connect(function()
+    TweenService:Create(UnlockButton,
+        TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {BackgroundColor3 = Color3.fromRGB(255, 214, 229)}
+    ):Play()
+    TweenService:Create(UnlockScale,
+        TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Scale = 1.02}
+    ):Play()
+end)
+UnlockButton.MouseLeave:Connect(function()
+    TweenService:Create(UnlockButton,
+        TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {BackgroundColor3 = Color3.fromRGB(255, 184, 208)}
+    ):Play()
+    TweenService:Create(UnlockScale,
+        TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Scale = 1}
+    ):Play()
+end)
+UnlockButton.MouseButton1Down:Connect(function()
+    TweenService:Create(UnlockScale,
+        TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Scale = 0.985}
+    ):Play()
+end)
+UnlockButton.MouseButton1Up:Connect(function()
+    TweenService:Create(UnlockScale,
+        TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {Scale = 1.02}
+    ):Play()
+end)
 
 local AccessExit = Instance.new("TextButton")
 AccessExit.Name = "ExitLockedHub"
