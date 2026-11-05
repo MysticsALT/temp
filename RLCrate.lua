@@ -739,7 +739,7 @@ local function CreatePage(name)
     padding.Parent = page
 
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 8)
+    layout.Padding = UDim.new(0, 13)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Parent = page
 
@@ -904,7 +904,7 @@ end
 local function Section(text)
     local holder = Instance.new("Frame")
     holder.Name = "SectionHeading"
-    holder.Size = UDim2.new(1, 0, 0, 36)
+    holder.Size = UDim2.new(1, 0, 0, 42)
     holder.BackgroundColor3 = Color3.fromRGB(73, 83, 103)
     holder.BackgroundTransparency = 0.02
     holder.BorderSizePixel = 0
@@ -974,10 +974,50 @@ local function Section(text)
     return holder
 end
 
-local function MakeButton(text, callback, color)
+-- Semantic button roles separate important actions from toggles and utilities.
+-- No child icon/rail overlays the actual button label.
+VisualFX.StyleActionButton = function(button)
+    local variant = button:GetAttribute("MysticsActionVariant") or "secondary"
+    local stroke = button:FindFirstChildOfClass("UIStroke")
+    local fill
+    local border
+    local alpha = 0.23
+    if variant == "primary" then
+        fill = Theme.Panel2:Lerp(Theme.Accent, Theme.Name == "BLOOD RED" and 0.60 or 0.30)
+        border = Theme.Accent2
+        alpha = 0.04
+    elseif variant == "danger" then
+        fill = Color3.fromRGB(135, 33, 47)
+        border = Color3.fromRGB(255, 153, 161)
+        alpha = 0.10
+    elseif variant == "toggle" then
+        fill = VisualFX.LabelBackground:Lerp(Theme.Accent, 0.17)
+        border = Theme.Accent2
+        alpha = 0.22
+    elseif variant == "quiet" then
+        fill = Theme.Background:Lerp(VisualFX.SecondaryBackground, 0.67)
+        border = Theme.Border
+        alpha = 0.52
+    else
+        fill = VisualFX.SecondaryBackground:Lerp(Color3.fromRGB(241, 236, 242), 0.10)
+        border = Theme.Border
+    end
+    button.BackgroundColor3 = fill
+    button.BackgroundTransparency = 0
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextTransparency = 0
+    if stroke then
+        stroke.Color = border
+        stroke.Transparency = alpha
+        stroke.Thickness = variant == "primary" and 1.7 or 1.25
+    end
+end
+
+local function MakeButton(text, callback, color, variant)
+    local kind = variant or "secondary"
     local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, 0, 0, 44)
-    b.BackgroundColor3 = color and VisualFX.SecondaryBackground or Theme.Panel2
+    b.Size = UDim2.new(1, 0, 0, (kind == "primary" and 58 or (kind == "danger" and 54 or 49)))
+    b.BackgroundColor3 = VisualFX.SecondaryBackground
     b.BackgroundTransparency = 0
     b.BorderSizePixel = 0
     b.ZIndex = 10
@@ -985,16 +1025,17 @@ local function MakeButton(text, callback, color)
     b.TextColor3 = Color3.fromRGB(255, 255, 255)
     b.TextTransparency = 0
     b.Font = Enum.Font.GothamBold
-    b.TextSize = 13
+    b.TextSize = kind == "primary" and 15 or 13
     b.TextXAlignment = Enum.TextXAlignment.Left
     b.AutoButtonColor = false
     b.Parent = Content
-    b:SetAttribute("MysticsButtonTone", color and "secondary" or "primary")
+    b:SetAttribute("MysticsButtonTone", kind == "primary" and "primary" or "secondary")
+    b:SetAttribute("MysticsActionVariant", kind)
     b:SetAttribute("MysticsGlassButton", true)
 
     Corner(b, 12)
     local buttonStroke = Stroke(b, Theme.Border, 1)
-    buttonStroke.Transparency = 0.22
+    VisualFX.StyleActionButton(b)
     -- No decorative rail over button labels: a child positioned inside a
     -- padded TextButton can render through the first letters.
     local padding = Instance.new("UIPadding")
@@ -1022,7 +1063,8 @@ local function MakeButton(text, callback, color)
     end)
     b.MouseLeave:Connect(function()
         TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Scale = 1}):Play()
-        TweenService:Create(buttonStroke, TweenInfo.new(0.18), {Transparency = 0.22, Thickness = 1}):Play()
+        local baseAlpha = kind == "primary" and 0.04 or (kind == "danger" and 0.10 or (kind == "quiet" and 0.52 or 0.23))
+        TweenService:Create(buttonStroke, TweenInfo.new(0.18), {Transparency = baseAlpha, Thickness = kind == "primary" and 1.7 or 1.25}):Play()
         TweenService:Create(buttonReflection, TweenInfo.new(0.18), {BackgroundTransparency = 0.80}):Play()
     end)
     b.MouseButton1Down:Connect(function()
