@@ -1291,6 +1291,78 @@ ItemButton = makeButton(Dupes, "BEGIN LEGACY ITEM DUPE TEST", function()
 end, "cta", 52)
 info(Dupes, "The old method is local-only and cannot guarantee server persistence. Auto-stops after 10 seconds and attempts to restore the original slot value.", 92)
 
+-- The only verified historical money call is Donate:InvokeServer(
+-- LocalPlayer, fullBalance, 1). To limit risk, this experiment sends a
+-- SMALL user-entered amount (max 100 or 2% of visible balance), once.
+section(Dupes, "MONEY DUPLICATION TEST", "One capped legacy self-donation; unverified.")
+info(Dupes, "WARNING: This might permanently deduct the amount, fail, or do nothing. No guaranteed refund. Never use the full balance; try only with disposable game currency.", 105)
+local MoneyAmount = makeInput(Dupes, "Amount: 1-100, maximum 2% of balance", "1")
+local MoneyRiskInput = makeInput(Dupes, "Type SEND to unlock", "")
+local MoneyResult = info(Dupes, "MONEY TEST  /  IDLE", 92, "text")
+local MoneyButton
+local MoneyArmedExpiry = 0
+local MoneyTestBusy = false
+local LastMoneyTest = -1000
+MoneyButton = makeButton(Dupes, "BEGIN LEGACY MONEY DUPE TEST", function()
+    if MoneyTestBusy then notify("Previous test still waiting on server."); return end
+    if os.clock() - LastMoneyTest < 90 then
+        notify("Money test cooldown: wait 90 seconds."); return
+    end
+    if not gameLooksLikeLT2() then notify("Expected LT2 structures absent."); return end
+    if string.upper(MoneyRiskInput.Text:match("^%s*(.-)%s*$")) ~= "SEND" then
+        notify("Type SEND to accept possible loss of the amount."); return
+    end
+    local amount, balance = tonumber(MoneyAmount.Text), getMoney()
+    if not amount or amount ~= math.floor(amount) or amount < 1 or amount > 100
+        or not balance or amount > balance
+        or amount > math.max(1, math.floor(balance * 0.02)) then
+        MoneyResult.Text = "INVALID AMOUNT  /  Integer 1-100, not above 2% of your balance."
+        return
+    end
+    local _, saving = dupeSaveValues()
+    if saving and saving:IsA("ValueBase") and saving.Value == true then
+        notify("Save/load currently in progress; cancelled."); return
+    end
+    local tx = game:GetService("ReplicatedStorage"):FindFirstChild("Transactions")
+    local cts = tx and tx:FindFirstChild("ClientToServer")
+    local donate = cts and cts:FindFirstChild("Donate")
+    if not donate or not donate:IsA("RemoteFunction") then
+        MoneyResult.Text = "UNAVAILABLE  /  Historical Donate remote not found."
+        notify("Old self-donation call is no longer available."); return
+    end
+    if os.clock() > MoneyArmedExpiry then
+        MoneyArmedExpiry = os.clock() + 10
+        MoneyButton.Text = "CONFIRM SELF-DONATION TEST"
+        MoneyResult.Text = "ARMED  /  " .. tostring(amount) ..
+            " money may be lost. Click again within 10 seconds."
+        return
+    end
+
+    MoneyArmedExpiry = 0
+    LastMoneyTest = os.clock()
+    MoneyTestBusy = true
+    MoneyButton.Text = "WAITING FOR SERVER..."
+    MoneyResult.Text = "RUNNING  /  One self-donation call for " .. tostring(amount)
+    task.spawn(function()
+        local ok, response = pcall(function()
+            return donate:InvokeServer(LocalPlayer, amount, 1)
+        end)
+        if State.closed then return end
+        MoneyTestBusy = false
+        MoneyButton.Text = "BEGIN LEGACY MONEY DUPE TEST"
+        local after = getMoney()
+        MoneyResult.Text = "SERVER CALL  /  " .. (ok and "RETURNED" or "FAILED") ..
+            "\nVISIBLE BALANCE CHANGE  /  " ..
+            (after and tostring(after - balance) or "UNKNOWN") ..
+            "\nDOES NOT CONFIRM PERSISTENT DUPLICATION"
+        if not ok then warn("[Mystics LT2] Money experiment failed: " .. tostring(response)) end
+        notify("Self-donation test ended. Verify balance after a fresh load.")
+        updateInventory()
+    end)
+end, "cta", 52)
+info(Dupes, "A server reply or temporary money change does not confirm any amount was duplicated. There is no automatic repeat or hidden retry.", 86)
+updateDupeReadout()
+
 local StylePage = pages.STYLE
 section(StylePage, "SIGNATURE THEME", "Choose the look of the LT2 module.")
 local themeButtons = {}
