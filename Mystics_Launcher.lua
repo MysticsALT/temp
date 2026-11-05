@@ -41,6 +41,7 @@ local HUB_CLOSE_SOUND_ID = "rbxassetid://6026984224"
 local HubSoundsEnabled = true
 local HubClosing = false
 local HubLaunching = false
+local HubUnlocked = false
 local HubVisual = {}
 
 local function PlayHubSound(soundId, volume, speed)
@@ -273,47 +274,35 @@ HubVisual.Kicker.TextSize = 8
 HubVisual.Kicker.TextXAlignment = Enum.TextXAlignment.Left
 HubVisual.Kicker.Parent = Header
 
-HubVisual.ChipRow = Instance.new("Frame")
-HubVisual.ChipRow.Name = "LauncherStatusChips"
-HubVisual.ChipRow.BackgroundTransparency = 1
-HubVisual.ChipRow.Position = UDim2.new(0, 28, 0, 116)
-HubVisual.ChipRow.Size = UDim2.new(1, -56, 0, 20)
-HubVisual.ChipRow.Parent = Header
+HubVisual.StatusChip = Instance.new("Frame")
+HubVisual.StatusChip.Name = "UndetectedStatus"
+HubVisual.StatusChip.Position = UDim2.new(0, 28, 0, 116)
+HubVisual.StatusChip.Size = UDim2.fromOffset(113, 20)
+HubVisual.StatusChip.BackgroundColor3 = Color3.fromRGB(76, 23, 42)
+HubVisual.StatusChip.BackgroundTransparency = 0.12
+HubVisual.StatusChip.BorderSizePixel = 0
+HubVisual.StatusChip.Parent = Header
+AddCorner(HubVisual.StatusChip, 99)
+AddStroke(HubVisual.StatusChip, Color3.fromRGB(151, 53, 77), 1, 0.5)
 
-for i, chipInfo in ipairs({
-    {"ON-DEMAND MODULE", 112},
-    {"GITHUB CONNECTED", 116}
-}) do
-    local chip = Instance.new("Frame")
-    chip.Name = "LauncherChip" .. i
-    chip.Position = UDim2.fromOffset((i - 1) * 122, 0)
-    chip.Size = UDim2.fromOffset(chipInfo[2], 20)
-    chip.BackgroundColor3 = Color3.fromRGB(76, 23, 42)
-    chip.BackgroundTransparency = 0.12
-    chip.BorderSizePixel = 0
-    chip.Parent = HubVisual.ChipRow
-    AddCorner(chip, 99)
-    AddStroke(chip, Color3.fromRGB(151, 53, 77), 1, 0.5)
+local statusDot = Instance.new("Frame")
+statusDot.Size = UDim2.fromOffset(5, 5)
+statusDot.Position = UDim2.new(0, 10, 0.5, -2)
+statusDot.BackgroundColor3 = Color3.fromRGB(255, 125, 153)
+statusDot.BorderSizePixel = 0
+statusDot.Parent = HubVisual.StatusChip
+AddCorner(statusDot, 99)
 
-    local chipDot = Instance.new("Frame")
-    chipDot.Size = UDim2.fromOffset(5, 5)
-    chipDot.Position = UDim2.new(0, 9, 0.5, -2)
-    chipDot.BackgroundColor3 = Color3.fromRGB(255, 125, 153)
-    chipDot.BorderSizePixel = 0
-    chipDot.Parent = chip
-    AddCorner(chipDot, 99)
-
-    local chipText = Instance.new("TextLabel")
-    chipText.BackgroundTransparency = 1
-    chipText.Position = UDim2.fromOffset(19, 0)
-    chipText.Size = UDim2.new(1, -24, 1, 0)
-    chipText.Font = Enum.Font.GothamBold
-    chipText.Text = chipInfo[1]
-    chipText.TextColor3 = Color3.fromRGB(225, 190, 199)
-    chipText.TextSize = 8
-    chipText.TextXAlignment = Enum.TextXAlignment.Left
-    chipText.Parent = chip
-end
+local statusText = Instance.new("TextLabel")
+statusText.BackgroundTransparency = 1
+statusText.Position = UDim2.fromOffset(22, 0)
+statusText.Size = UDim2.new(1, -26, 1, 0)
+statusText.Font = Enum.Font.GothamBold
+statusText.Text = "UNDETECTED"
+statusText.TextColor3 = Color3.fromRGB(245, 194, 209)
+statusText.TextSize = 9
+statusText.TextXAlignment = Enum.TextXAlignment.Left
+statusText.Parent = HubVisual.StatusChip
 
 HubVisual.HeaderRule = Instance.new("Frame")
 HubVisual.HeaderRule.Position = UDim2.new(0, 22, 1, -2)
@@ -397,15 +386,28 @@ local function CreateHubButton(label, order, isPrimary, callback)
     button.AutoButtonColor = true
     button.Font = Enum.Font.GothamSemibold
     local buttonIcons = {"📦", "🎁", "💎", "🏆", "📊", "⚙️"}
-    button.Text = label
-    button.TextColor3 = isPrimary
-        and Color3.fromRGB(255, 250, 251)
-        or Color3.fromRGB(239, 207, 216)
-    button.TextSize = 13
-    button.TextXAlignment = Enum.TextXAlignment.Left
+    button.Text = ""
     button.Parent = List
     button.AutoButtonColor = false
     AddCorner(button, 14)
+
+    -- TextButton.Text ignores UIPadding in some clients, so use a dedicated
+    -- label with fixed space for the emoji on the left and status pill on the right.
+    local buttonTitle = Instance.new("TextLabel")
+    buttonTitle.Name = "ButtonTitle"
+    buttonTitle.BackgroundTransparency = 1
+    buttonTitle.Position = UDim2.fromOffset(60, 0)
+    buttonTitle.Size = UDim2.new(1, -154, 1, 0)
+    buttonTitle.Font = Enum.Font.GothamSemibold
+    buttonTitle.Text = label
+    buttonTitle.TextColor3 = isPrimary
+        and Color3.fromRGB(255, 250, 251)
+        or Color3.fromRGB(239, 207, 216)
+    buttonTitle.TextSize = 13
+    buttonTitle.TextXAlignment = Enum.TextXAlignment.Left
+    buttonTitle.TextTruncate = Enum.TextTruncate.AtEnd
+    buttonTitle.ZIndex = 2
+    buttonTitle.Parent = button
 
     local iconBadge = Instance.new("Frame")
     iconBadge.Name = "EmojiIconBadge"
@@ -428,11 +430,6 @@ local function CreateHubButton(label, order, isPrimary, callback)
     emoji.TextSize = 19
     emoji.ZIndex = 4
     emoji.Parent = iconBadge
-
-    local buttonPadding = Instance.new("UIPadding")
-    buttonPadding.PaddingLeft = UDim.new(0, 58)
-    buttonPadding.PaddingRight = UDim.new(0, 104)
-    buttonPadding.Parent = button
 
     local accentRail = Instance.new("Frame")
     accentRail.Name = "AccentRail"
@@ -484,7 +481,7 @@ local function CreateHubButton(label, order, isPrimary, callback)
 
     if callback then
         button.Activated:Connect(function()
-            if HubLaunching or HubClosing then return end
+            if not HubUnlocked or HubLaunching or HubClosing then return end
             PlayHubSound(HUB_CLICK_SOUND_ID, 0.28, 1 + math.random(-3, 3) / 100)
             callback()
         end)
@@ -518,8 +515,8 @@ local function CreateHubButton(label, order, isPrimary, callback)
         if button.Parent then
             TweenService:Create(button, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                 BackgroundColor3 = isPrimary
-                    and Color3.fromRGB(82, 7, 23)
-                    or Color3.fromRGB(25, 4, 10)
+                    and Color3.fromRGB(153, 31, 64)
+                    or Color3.fromRGB(62, 20, 36)
             }):Play()
             TweenService:Create(buttonScale, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                 Scale = 1
@@ -540,7 +537,8 @@ local RLCrateLoading = false
 
 local function SetRLCrateButtonState(text, enabled)
     if RLCrateButton and RLCrateButton.Parent then
-        RLCrateButton.Text = text
+        local buttonTitle = RLCrateButton:FindFirstChild("ButtonTitle")
+        if buttonTitle then buttonTitle.Text = text end
         RLCrateButton.Active = enabled
         RLCrateButton.AutoButtonColor = enabled
         local pill = RLCrateButton:FindFirstChild("StatePill")
@@ -553,17 +551,17 @@ local function SetRLCrateButtonState(text, enabled)
 end
 
 local function LaunchSelectedExperience()
-    if HubLaunching or HubClosing or RLCrateLoading then return end
+    if not HubUnlocked or HubLaunching or HubClosing or RLCrateLoading then return end
     HubLaunching = true
     RLCrateLoading = true
-    SetRLCrateButtonState("✦   DOWNLOADING RL CRATE...", false)
+    SetRLCrateButtonState("Downloading RL Crate...", false)
     task.spawn(function()
         local ok, err = pcall(LaunchRLCrateUnboxing)
         if not ok then
             warn("[Mystics Hub] RL Crate load failed: " .. tostring(err))
             RLCrateLoading = false
             HubLaunching = false
-            SetRLCrateButtonState("✦   RETRY RL CRATE UNBOXING", true)
+            SetRLCrateButtonState("Retry RL Crate Unboxing", true)
             pcall(function()
                 game:GetService("StarterGui"):SetCore("SendNotification", {
                     Title = "MYSTICS HUB",
@@ -609,11 +607,11 @@ LaunchRLCrateUnboxing = function()
 end
 
 RLCrateButton = CreateHubButton("RL Crate Unboxing", 1, true, LaunchSelectedExperience)
-CreateHubButton("Reward Collection  —  Coming Soon", 2, false, nil)
-CreateHubButton("Premium Items  —  Coming Soon", 3, false, nil)
-CreateHubButton("Achievements  —  Coming Soon", 4, false, nil)
-CreateHubButton("Statistics  —  Coming Soon", 5, false, nil)
-CreateHubButton("Settings  —  Coming Soon", 6, false, nil)
+CreateHubButton("Reward Collection", 2, false, nil)
+CreateHubButton("Premium Items", 3, false, nil)
+CreateHubButton("Achievements", 4, false, nil)
+CreateHubButton("Statistics", 5, false, nil)
+CreateHubButton("Settings", 6, false, nil)
 
 local Footer = Instance.new("TextLabel")
 Footer.BackgroundTransparency = 1
@@ -627,6 +625,178 @@ Footer.TextSize = 8
 Footer.Parent = Background
 
 CloseButton.Activated:Connect(CloseHub)
+
+-- The hub stays inaccessible until the local four-digit access code is entered.
+-- This is a client-side UI lock, not a secure server-side authentication system.
+local AccessOverlay = Instance.new("Frame")
+AccessOverlay.Name = "AccessGate"
+AccessOverlay.Size = UDim2.fromScale(1, 1)
+AccessOverlay.BackgroundColor3 = Color3.fromRGB(28, 7, 17)
+AccessOverlay.BackgroundTransparency = 0.02
+AccessOverlay.BorderSizePixel = 0
+AccessOverlay.Active = true
+AccessOverlay.ZIndex = 40
+AccessOverlay.Parent = Background
+AddCorner(AccessOverlay, 24)
+AddGradient(AccessOverlay, Color3.fromRGB(78, 18, 42), Color3.fromRGB(23, 6, 15), 90)
+
+local AccessPanel = Instance.new("Frame")
+AccessPanel.Name = "AccessPanel"
+AccessPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+AccessPanel.Position = UDim2.fromScale(0.5, 0.5)
+AccessPanel.Size = UDim2.new(1, -50, 0, 320)
+AccessPanel.BackgroundColor3 = Color3.fromRGB(73, 18, 39)
+AccessPanel.BorderSizePixel = 0
+AccessPanel.ZIndex = 41
+AccessPanel.Parent = AccessOverlay
+AddCorner(AccessPanel, 18)
+local AccessStroke = AddStroke(AccessPanel, Color3.fromRGB(231, 86, 127), 1.5, 0.14)
+AddGradient(AccessPanel, Color3.fromRGB(107, 25, 53), Color3.fromRGB(46, 12, 29), 90)
+
+local AccessKicker = Instance.new("TextLabel")
+AccessKicker.BackgroundTransparency = 1
+AccessKicker.Position = UDim2.fromOffset(24, 24)
+AccessKicker.Size = UDim2.new(1, -48, 0, 18)
+AccessKicker.Font = Enum.Font.GothamBold
+AccessKicker.Text = "MYSTICS  /  SECURE ACCESS"
+AccessKicker.TextSize = 10
+AccessKicker.TextColor3 = Color3.fromRGB(255, 156, 182)
+AccessKicker.TextXAlignment = Enum.TextXAlignment.Left
+AccessKicker.ZIndex = 42
+AccessKicker.Parent = AccessPanel
+
+local AccessTitle = Instance.new("TextLabel")
+AccessTitle.BackgroundTransparency = 1
+AccessTitle.Position = UDim2.fromOffset(24, 54)
+AccessTitle.Size = UDim2.new(1, -48, 0, 36)
+AccessTitle.Font = Enum.Font.GothamBlack
+AccessTitle.Text = "UNLOCK MYSTICS"
+AccessTitle.TextSize = 23
+AccessTitle.TextColor3 = Color3.fromRGB(255, 243, 248)
+AccessTitle.TextXAlignment = Enum.TextXAlignment.Left
+AccessTitle.ZIndex = 42
+AccessTitle.Parent = AccessPanel
+
+local AccessHint = Instance.new("TextLabel")
+AccessHint.BackgroundTransparency = 1
+AccessHint.Position = UDim2.fromOffset(24, 94)
+AccessHint.Size = UDim2.new(1, -48, 0, 24)
+AccessHint.Font = Enum.Font.Gotham
+AccessHint.Text = "Enter your 4-digit code to access the hub."
+AccessHint.TextSize = 12
+AccessHint.TextColor3 = Color3.fromRGB(222, 176, 191)
+AccessHint.TextXAlignment = Enum.TextXAlignment.Left
+AccessHint.ZIndex = 42
+AccessHint.Parent = AccessPanel
+
+local AccessInput = Instance.new("TextBox")
+AccessInput.Name = "AccessCodeInput"
+AccessInput.Position = UDim2.new(0, 24, 0, 135)
+AccessInput.Size = UDim2.new(1, -48, 0, 52)
+AccessInput.BackgroundColor3 = Color3.fromRGB(30, 9, 21)
+AccessInput.BorderSizePixel = 0
+AccessInput.ClearTextOnFocus = false
+AccessInput.MultiLine = false
+AccessInput.Text = ""
+AccessInput.PlaceholderText = ""
+AccessInput.TextTransparency = 1
+AccessInput.TextSize = 18
+AccessInput.Font = Enum.Font.GothamBold
+AccessInput.TextXAlignment = Enum.TextXAlignment.Center
+AccessInput.ZIndex = 43
+AccessInput.Parent = AccessPanel
+AddCorner(AccessInput, 12)
+AddStroke(AccessInput, Color3.fromRGB(190, 78, 110), 1, 0.25)
+
+local AccessMask = Instance.new("TextLabel")
+AccessMask.Name = "CodeMask"
+AccessMask.BackgroundTransparency = 1
+AccessMask.Position = AccessInput.Position
+AccessMask.Size = AccessInput.Size
+AccessMask.Font = Enum.Font.GothamBold
+AccessMask.Text = "○   ○   ○   ○"
+AccessMask.TextSize = 21
+AccessMask.TextColor3 = Color3.fromRGB(255, 207, 221)
+AccessMask.ZIndex = 44
+AccessMask.Active = false
+AccessMask.Parent = AccessPanel
+
+local AccessError = Instance.new("TextLabel")
+AccessError.BackgroundTransparency = 1
+AccessError.Position = UDim2.new(0, 24, 0, 194)
+AccessError.Size = UDim2.new(1, -48, 0, 18)
+AccessError.Font = Enum.Font.GothamMedium
+AccessError.Text = ""
+AccessError.TextColor3 = Color3.fromRGB(255, 127, 147)
+AccessError.TextSize = 11
+AccessError.ZIndex = 42
+AccessError.Parent = AccessPanel
+
+local UnlockButton = Instance.new("TextButton")
+UnlockButton.Name = "UnlockButton"
+UnlockButton.Position = UDim2.new(0, 24, 0, 224)
+UnlockButton.Size = UDim2.new(1, -48, 0, 44)
+UnlockButton.BackgroundColor3 = Color3.fromRGB(194, 48, 91)
+UnlockButton.BorderSizePixel = 0
+UnlockButton.Font = Enum.Font.GothamBold
+UnlockButton.Text = "UNLOCK HUB"
+UnlockButton.TextColor3 = Color3.fromRGB(255, 247, 250)
+UnlockButton.TextSize = 13
+UnlockButton.AutoButtonColor = true
+UnlockButton.ZIndex = 42
+UnlockButton.Parent = AccessPanel
+AddCorner(UnlockButton, 11)
+AddGradient(UnlockButton, Color3.fromRGB(218, 64, 105), Color3.fromRGB(134, 28, 67), 90)
+
+local AccessExit = Instance.new("TextButton")
+AccessExit.Name = "ExitLockedHub"
+AccessExit.Position = UDim2.new(0, 24, 1, -38)
+AccessExit.Size = UDim2.new(1, -48, 0, 26)
+AccessExit.BackgroundTransparency = 1
+AccessExit.Font = Enum.Font.GothamMedium
+AccessExit.Text = "EXIT"
+AccessExit.TextColor3 = Color3.fromRGB(208, 151, 172)
+AccessExit.TextSize = 10
+AccessExit.ZIndex = 42
+AccessExit.Parent = AccessPanel
+AccessExit.Activated:Connect(CloseHub)
+
+AccessInput:GetPropertyChangedSignal("Text"):Connect(function()
+    if HubUnlocked then return end
+    local digits = AccessInput.Text:gsub("%D", ""):sub(1, 4)
+    if AccessInput.Text ~= digits then
+        AccessInput.Text = digits
+    end
+    local dots = {}
+    for i = 1, 4 do
+        dots[i] = i <= #digits and "●" or "○"
+    end
+    AccessMask.Text = table.concat(dots, "   ")
+    AccessError.Text = ""
+end)
+
+local function AttemptUnlock()
+    if HubUnlocked or HubClosing then return end
+    if AccessInput.Text == "4587" then
+        HubUnlocked = true
+        PlayHubSound(HUB_CLICK_SOUND_ID, 0.25, 1.05)
+        AccessOverlay:Destroy()
+    else
+        AccessInput.Text = ""
+        AccessError.Text = "Incorrect code. Please try again."
+        TweenService:Create(
+            AccessStroke,
+            TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 1, true),
+            {Color = Color3.fromRGB(255, 80, 102), Thickness = 2.5}
+        ):Play()
+        AccessInput:CaptureFocus()
+    end
+end
+
+UnlockButton.Activated:Connect(AttemptUnlock)
+AccessInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then AttemptUnlock() end
+end)
 
 PlayHubSound(HUB_OPEN_SOUND_ID, 0.32, 1.04)
 HubOpenTween:Play()
