@@ -2756,9 +2756,7 @@ MakeButton("STOP SESSION", Stop, Theme.Panel2, "danger")
 --========================================================
 
 SelectPage("APPEARANCE")
-Section("MYSTICS THEME COLLECTION")
-
-local ThemeButton
+-- One theme gallery below replaces the old duplicate theme controls.
 local SoundButton
 
 --========================================================
@@ -2926,9 +2924,8 @@ local function ApplyTheme()
         Theme.Panel
     )
 
-    ThemeButton.Text = "THEME  /  " .. Theme.Name
     if SoundButton then
-        SoundButton.Text = UISoundsEnabled and "UI SOUNDS  /  ON" or "UI SOUNDS  /  OFF"
+        SoundButton.Text = UISoundsEnabled and "SOUND EFFECTS: ON" or "SOUND EFFECTS: OFF"
     end
 
     for _, obj in ipairs(Gui:GetDescendants()) do
@@ -2957,17 +2954,9 @@ local function ApplyTheme()
         elseif obj:IsA("TextButton") then
             if obj == MinButton then
                 obj.BackgroundColor3 = Theme.Panel2
-            elseif obj:GetAttribute("MysticsGlassButton") and obj:GetAttribute("MysticsButtonTone") == "secondary" then
-                obj.BackgroundColor3 = VisualFX.SecondaryBackground
-                obj.TextColor3 = Color3.fromRGB(255, 255, 255)
-                obj.TextTransparency = 0
-            elseif obj:GetAttribute("MysticsButtonTone") == "secondary" then
-                obj.BackgroundColor3 = Theme.Panel2
-                obj.TextColor3 = Theme.Text
-            elseif obj:GetAttribute("MysticsButtonTone") == "primary" then
-                obj.BackgroundColor3 = Theme.Panel2
-                obj.TextColor3 = Color3.fromRGB(255, 255, 255)
-                obj.TextTransparency = 0
+            elseif obj:GetAttribute("MysticsGlassButton") then
+                -- Action palette is restored after generic UIStroke updates.
+                VisualFX.StyleActionButton(obj)
             end
         elseif obj:IsA("Frame") and obj.Name == "SectionHeading" then
             obj.BackgroundColor3 = VisualFX.SectionBackground
@@ -3006,6 +2995,11 @@ local function ApplyTheme()
     for _, page in pairs(Pages) do
         page.ScrollBarImageColor3 = Theme.Accent
     end
+    for _, obj in ipairs(Gui:GetDescendants()) do
+        if obj:IsA("TextButton") and obj:GetAttribute("MysticsGlassButton") then
+            VisualFX.StyleActionButton(obj)
+        end
+    end
     -- ApplyTheme's shared stroke pass runs above; restore the emblem accent last.
     VisualFX.EmblemStroke.Color = Theme.Accent2
     VisualFX.BorderSweep.Color = ColorSequence.new(Theme.Accent2, Theme.Border)
@@ -3033,18 +3027,7 @@ local function ApplyTheme()
     SelectPage(CurrentPageName)
 end
 
--- Retain the old theme cycle callback for compatibility with the existing
--- script, but use a more discoverable theme-selection gallery instead.
-ThemeButton = MakeButton(
-    "THEME  /  OBSIDIAN",
-    function()
-        ThemeIndex = ThemeIndex % #Themes + 1
-        ApplyTheme()
-        Notify("Theme: " .. Theme.Name)
-    end
-)
-ThemeButton.Visible = false
-
+-- Theme selection lives in the gallery; no duplicate cycle button.
 Section("CHOOSE YOUR SIGNATURE THEME")
 VisualFX.ThemeCards = {}
 VisualFX.ThemeGallery = Instance.new("Frame")
@@ -3169,9 +3152,9 @@ MakeButton("SAVE PROFILE", function()
 
     SaveLocalData()
     Notify("Profile saved: " .. name)
-end)
+end, nil, "primary")
 
-MakeButton("LOAD PROFILE", function()
+MakeButton("APPLY PROFILE", function()
     local p = Profiles[ProfileInput.Text]
 
     if not p then
@@ -3193,7 +3176,10 @@ MakeButton("LOAD PROFILE", function()
     Notify("Profile loaded.")
 end)
 
-MakeButton("VIEW SESSION HISTORY", function()
+-- Session history and reset belong to performance, not theme selection.
+SelectPage("PERFORMANCE")
+Section("SESSION TOOLS")
+MakeButton("SESSION HISTORY", function()
     if #History == 0 then
         Notify("No saved session history yet.")
         return
@@ -3209,9 +3195,9 @@ MakeButton("VIEW SESSION HISTORY", function()
         )
     end
     Notify(table.concat(lines, "\n"))
-end)
+end, nil, "quiet")
 
-MakeButton("RESET SESSION STATISTICS", function()
+MakeButton("CLEAR SESSION STATS", function()
     if Running then
         Notify("Stop automation before resetting session statistics.")
         return
@@ -3222,7 +3208,7 @@ MakeButton("RESET SESSION STATISTICS", function()
     ResetSessionValue()
     UpdateStats()
     Notify("Current session statistics reset.")
-end, Theme.Panel2)
+end, Theme.Panel2, "quiet")
 
 -- Open on the overview tab when the script finishes building.
 SelectPage("OVERVIEW")
@@ -3419,15 +3405,18 @@ if getgenv then
     getgenv().MysticsCleanup = Cleanup
 end
 
--- Premium UI sound toggle. Kept separate from automation controls.
-SoundButton = MakeButton("UI SOUNDS  /  ON", function()
+-- Audio preference stays on STYLE, never in the HOME session readout.
+SelectPage("APPEARANCE")
+Section("PREFERENCES")
+SoundButton = MakeButton("SOUND EFFECTS: ON", function()
     UISoundsEnabled = not UISoundsEnabled
-    SoundButton.Text = UISoundsEnabled and "UI SOUNDS  /  ON" or "UI SOUNDS  /  OFF"
+    SoundButton.Text = UISoundsEnabled and "SOUND EFFECTS: ON" or "SOUND EFFECTS: OFF"
     if UISoundsEnabled then
         PlayUISound(UI_CONFIRM_SOUND_ID, 0.22, 1.04)
     end
-end, Theme.Panel2)
+end, Theme.Panel2, "toggle")
 
+SelectPage("OVERVIEW")
 ApplyTheme()
 
 --========================================================
