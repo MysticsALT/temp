@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.15 | Self-contained utility module + opt-in legacy research tests
+-- V2.16 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -29,18 +29,18 @@ if previous then previous:Destroy() end
 local State = {
     closed = false, selectedTab = "TRAVEL", selectedPlayer = nil,
     notifications = true, sounds = true, lowMotion = false,
-    theme = "MYSTICS", returnCFrame = nil,
+    theme = "BLOOD RED", returnCFrame = nil,
     customLocations = {}, woodHighlights = {},
     lastTeleport = 0, minimised = false,
 }
 local Connections, Tweens, Styled = {}, {}, {}
 local Palette = {
-    MYSTICS = {
-        base = Color3.fromRGB(14, 17, 25), surface = Color3.fromRGB(24, 29, 41),
-        card = Color3.fromRGB(33, 40, 55), action = Color3.fromRGB(103, 42, 69),
-        accent = Color3.fromRGB(244, 91, 139), light = Color3.fromRGB(255, 174, 203),
-        text = Color3.fromRGB(248, 249, 253), muted = Color3.fromRGB(164, 174, 194),
-        border = Color3.fromRGB(66, 76, 96)
+    ["BLOOD RED"] = {
+        base = Color3.fromRGB(18, 5, 8), surface = Color3.fromRGB(35, 9, 14),
+        card = Color3.fromRGB(55, 13, 21), action = Color3.fromRGB(112, 12, 29),
+        accent = Color3.fromRGB(205, 24, 48), light = Color3.fromRGB(255, 91, 108),
+        text = Color3.fromRGB(255, 242, 243), muted = Color3.fromRGB(196, 150, 157),
+        border = Color3.fromRGB(111, 32, 46)
     },
     OBSIDIAN = {
         base = Color3.fromRGB(24, 29, 44), surface = Color3.fromRGB(43, 51, 73),
@@ -242,15 +242,15 @@ Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = Parent
 
 local Main = makeFrame(Gui, "MysticsLT2Window",
-    UDim2.fromOffset(620, 700), UDim2.new(0.5, -310, 0.5, -350), "base", 22)
+    UDim2.fromOffset(540, 610), UDim2.new(0.5, -270, 0.5, -305), "base", 22)
 Main.ClipsDescendants = true
 stroke(Main, "accentStroke", 2)
 local mainGradient = Instance.new("UIGradient")
 mainGradient.Rotation = 115
 mainGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 35, 49)),
-    ColorSequenceKeypoint.new(0.55, Color3.fromRGB(16, 20, 30)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(34, 20, 34))
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(55, 12, 22)),
+    ColorSequenceKeypoint.new(0.55, Color3.fromRGB(19, 5, 9)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(76, 8, 20))
 })
 mainGradient.Parent = Main
 animateForever(mainGradient, 18, {Rotation = 235})
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.15  •  MOTION EDITION",
+makeLabel(Header, "V2.16  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -408,7 +408,7 @@ for index, name in ipairs(TAB_NAMES) do
     end, "quiet", 32)
     tab.Name = name .. "Tab"
     tab.LayoutOrder = index
-    tab.Size = UDim2.fromOffset(58, 36)
+    tab.Size = UDim2.fromOffset(50, 36)
     tab.TextSize = 8
     tab.TextXAlignment = Enum.TextXAlignment.Center
     local tabScale = Instance.new("UIScale")
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.15",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.16",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -505,7 +505,7 @@ connect(MiniButton.Activated, function()
     Footer.Visible = not State.minimised
     MiniButton.Text = State.minimised and "+" or "−"
     tween(Main, TweenInfo.new(0.28, Enum.EasingStyle.Quint),
-        {Size = State.minimised and UDim2.fromOffset(526, 115) or UDim2.fromOffset(526, 618)})
+        {Size = State.minimised and UDim2.fromOffset(540, 115) or UDim2.fromOffset(540, 610)})
 end)
 if getgenv then pcall(function() getgenv().MysticsLT2Cleanup = cleanup end) end
 
@@ -1431,7 +1431,7 @@ updateDupeReadout()
 local StylePage = pages.STYLE
 section(StylePage, "SIGNATURE THEME", "Choose the look of the LT2 module.")
 local themeButtons = {}
-for _, key in ipairs({"MYSTICS", "OBSIDIAN", "CHRISTMAS", "HALLOWEEN"}) do
+for _, key in ipairs({"BLOOD RED", "OBSIDIAN", "CHRISTMAS", "HALLOWEEN"}) do
     local selectedTheme = key
     local button = makeButton(StylePage, key, function()
         State.theme = selectedTheme
@@ -1474,7 +1474,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.15 • Animated interface and discovery utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.16 • Blood Red animated interface.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
