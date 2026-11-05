@@ -1911,7 +1911,7 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
                     break
                 end
                 local charRoot = character:FindFirstChild("HumanoidRootPart")
-                if not charRoot or (charRoot.Position - section.Position).Magnitude > 18 then
+                if not charRoot or (charRoot.Position - section.Position).Magnitude > 35 then
                     failure = "LEFT CUTTING RANGE"; break
                 end
                 local held = equippedAxe()
@@ -2265,7 +2265,7 @@ CutStartButton = makeButton(toolkit, "START AUTO CUT / NEARBY TREES", function()
                     local nameValue = activeAxe and activeAxe:FindFirstChild("ToolName")
                     local damage = nameValue and axeDamage[tostring(nameValue.Value)]
                     if not currentRoot or not damage or not obj.Parent or not part.Parent
-                        or (currentRoot.Position - part.Position).Magnitude > 18
+                        or (currentRoot.Position - part.Position).Magnitude > 35
                         or (currentRoot.Position - startPosition).Magnitude > 30 then
                         CutStatus.Text = "AUTO CUT / STOPPED: RANGE OR AXE CHANGED"
                         cuttingActive = false
