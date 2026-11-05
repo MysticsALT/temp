@@ -10,12 +10,12 @@ Execute this launcher command:
 loadstring(game:HttpGet("https://raw.githubusercontent.com/MysticsALT/temp/main/Mystics_Launcher.lua"))()
 ```
 
-Then select **Lumber Tycoon 2** in the Mystics Hub. The launcher downloads and runs the pinned LT2 v2.16 module. It does not run an older embedded copy.
+Then select **Lumber Tycoon 2** in the Mystics Hub. The launcher downloads and runs the pinned LT2 v2.18 module. It includes the Wire Art Studio, where you can paste JSON stroke paths converted from an image, validate the paths, and submit them as wire placements. Stand facing the wall where you want the art, and make sure enough Wire items are available in your inventory. It does not run an older embedded copy.
 
 ## Current files
 
 - `Mystics_Launcher.lua` — Mystics Hub entry point and on-demand module loader.
-- `LT2.lua` — Lumber Tycoon 2 module, v2.16.
+- `LT2.lua` — Lumber Tycoon 2 module, v2.18.
 - `RLCrate.lua` — separate RL Crate experience module.
 - `backups/` — retained backups.
 
