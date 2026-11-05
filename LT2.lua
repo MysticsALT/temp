@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.14 | Self-contained utility module + opt-in legacy research tests
+-- V2.15 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -253,13 +253,25 @@ mainGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(1, Color3.fromRGB(34, 20, 34))
 })
 mainGradient.Parent = Main
+animateForever(mainGradient, 18, {Rotation = 235})
 local mainTopLine = makeFrame(Main, "TopAccent", UDim2.new(1, -34, 0, 3), UDim2.fromOffset(17, 3), "accent", 2)
 mainTopLine.ZIndex = 5
+local topLineGradient = Instance.new("UIGradient")
+topLineGradient.Color = ColorSequence.new(theme().light, theme().accent)
+topLineGradient.Parent = mainTopLine
+animateForever(topLineGradient, 3.2, {Offset = Vector2.new(1, 0)})
 
 local Ambient = makeFrame(Main, "RubyAtmosphere", UDim2.fromOffset(280, 280),
-    UDim2.fromOffset(-80, -100), "accent", 110)
-Ambient.BackgroundTransparency = 0.96
-animateForever(Ambient, 12, {Position = UDim2.fromOffset(120, 0)})
+    UDim2.fromOffset(-80, -100), "accent", 140)
+Ambient.BackgroundTransparency = 0.965
+animateForever(Ambient, 12, {Position = UDim2.fromOffset(140, -20),
+    Size = UDim2.fromOffset(350, 350), BackgroundTransparency = 0.94})
+local AmbientSecond = makeFrame(Main, "SecondaryAtmosphere", UDim2.fromOffset(210, 210),
+    UDim2.new(1, -150, 1, -180), "cta", 110)
+AmbientSecond.BackgroundTransparency = 0.975
+AmbientSecond.ZIndex = 0
+animateForever(AmbientSecond, 9, {Position = UDim2.new(1, -240, 1, -230),
+    Size = UDim2.fromOffset(270, 270), BackgroundTransparency = 0.95})
 
 local Header = makeFrame(Main, "MysticsHeader",
     UDim2.new(1, -24, 0, 104), UDim2.fromOffset(12, 12), "surface", 16)
@@ -271,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.14  •  REFINED INTERFACE",
+makeLabel(Header, "V2.15  •  MOTION EDITION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -283,6 +295,8 @@ local monogram = makeLabel(Emblem, "M", UDim2.fromScale(1, 1),
     UDim2.fromOffset(0, 0), 23, "text", true)
 monogram.TextXAlignment = Enum.TextXAlignment.Center
 animateForever(Emblem, 4.5, {Position = UDim2.new(1, -104, 0, 18)})
+local emblemStroke = Emblem:FindFirstChildOfClass("UIStroke")
+if emblemStroke then animateForever(emblemStroke, 2.8, {Transparency = 0.62}) end
 
 local CloseButton = makeButton(Header, "×", nil, "quiet", 38)
 CloseButton.Name = "CloseLT2"
@@ -368,12 +382,28 @@ for index, name in ipairs(TAB_NAMES) do
     local tab = makeButton(TabBar, name, function()
         State.selectedTab = name
         for key, p in pairs(pages) do
-            p.Visible = (key == name)
+            if key == name then
+                p.Visible = true
+                p.Position = UDim2.fromOffset(10, 16)
+                if not State.lowMotion then
+                    tween(p, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+                        {Position = UDim2.fromOffset(10, 10)})
+                else
+                    p.Position = UDim2.fromOffset(10, 10)
+                end
+            else
+                p.Visible = false
+            end
         end
         for key, item in pairs(tabs) do
-            item.BackgroundColor3 = (key == name) and theme().action or theme().surface
+            local selected = key == name
+            tween(item, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {BackgroundColor3 = selected and theme().action or theme().surface})
             local tstroke = item:FindFirstChildOfClass("UIStroke")
-            if tstroke then tstroke.Transparency = key == name and 0.02 or 0.55 end
+            if tstroke then tween(tstroke, TweenInfo.new(0.18), {Transparency = selected and 0.02 or 0.55}) end
+            local scale = item:FindFirstChildOfClass("UIScale")
+            if scale then tween(scale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                {Scale = selected and 1.045 or 1}) end
         end
     end, "quiet", 32)
     tab.Name = name .. "Tab"
@@ -381,19 +411,34 @@ for index, name in ipairs(TAB_NAMES) do
     tab.Size = UDim2.fromOffset(58, 36)
     tab.TextSize = 8
     tab.TextXAlignment = Enum.TextXAlignment.Center
+    local tabScale = Instance.new("UIScale")
+    tabScale.Parent = tab
     tabs[name] = tab
 end
 local function showTab(name)
     State.selectedTab = name
-    for key, p in pairs(pages) do p.Visible = (key == name) end
+    for key, p in pairs(pages) do
+        if key == name then
+            p.Visible = true
+            p.Position = UDim2.fromOffset(10, 16)
+            if not State.lowMotion then
+                tween(p, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+                    {Position = UDim2.fromOffset(10, 10)})
+            else p.Position = UDim2.fromOffset(10, 10) end
+        else p.Visible = false end
+    end
     for key, b in pairs(tabs) do
-        b.BackgroundColor3 = key == name and theme().action or theme().surface
+        local selected = key == name
+        tween(b, TweenInfo.new(0.18), {BackgroundColor3 = selected and theme().action or theme().surface})
         local st = b:FindFirstChildOfClass("UIStroke")
-        if st then st.Transparency = key == name and 0.02 or 0.55 end
+        if st then tween(st, TweenInfo.new(0.18), {Transparency = selected and 0.02 or 0.55}) end
+        local scale = b:FindFirstChildOfClass("UIScale")
+        if scale then tween(scale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {Scale = selected and 1.045 or 1}) end
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.13",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.15",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1429,7 +1474,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.14 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.15 • Animated interface and discovery utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -2506,6 +2551,21 @@ section(StylePage,"SAVE SETTINGS & WAYPOINTS","Optional executor file API; sessi
 makeButton(StylePage,"SAVE MY PREFERENCES",storeSettings,"cta")
 makeButton(StylePage,"LOAD SAVED PREFERENCES",loadSettings,"card")
 State.clearToolkitHighlights=clearToolkitHighlights
+
+-- Window entrance: soft scale-up and fade, with a moving accent sweep.
+local WindowScale = Instance.new("UIScale")
+WindowScale.Scale = 0.92
+WindowScale.Parent = Main
+local mainOutline = Main:FindFirstChildOfClass("UIStroke")
+Main.BackgroundTransparency = 0.12
+if not State.lowMotion then
+    tween(WindowScale, TweenInfo.new(0.48, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1})
+    tween(Main, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+    if mainOutline then tween(mainOutline, TweenInfo.new(0.45), {Transparency = 0.12}) end
+else
+    WindowScale.Scale = 1
+    Main.BackgroundTransparency = 0
+end
 
 applyTheme()
 for key, b in pairs(themeButtons) do
