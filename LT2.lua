@@ -824,6 +824,26 @@ HighlightButton = makeButton(Wood, "OWNED WOOD OUTLINES: OFF", function()
         notify("Wood outlines disabled.")
     end
 end, "card")
+-- Recheck owned wood when fresh logs or planks appear. Debounce bursts from
+-- tree chopping; the feature is completely idle when outlining is off.
+local woodRefreshScheduled = false
+local function scheduleWoodRefresh()
+    if State.closed or not State.woodHighlightEnabled or woodRefreshScheduled then return end
+    woodRefreshScheduled = true
+    task.delay(0.45, function()
+        woodRefreshScheduled = false
+        if not State.closed and State.woodHighlightEnabled then
+            refreshWood()
+        end
+    end)
+end
+for _, folderName in ipairs({"LogModels", "PlayerModels"}) do
+    local folder = Workspace:FindFirstChild(folderName)
+    if folder then
+        connect(folder.ChildAdded, scheduleWoodRefresh)
+        connect(folder.ChildRemoved, scheduleWoodRefresh)
+    end
+end
 info(Wood, "Outlines are client-side only. If owned logs lose ownership or the game stops replicating a model, they cannot be counted reliably.", 82)
 section(Wood, "WOOD DEBUGGER", "Arm the picker, then click a log or plank in the world.")
 local AimedWoodInfo = info(Wood, "AIMED MODEL  /  NOT INSPECTED", 72)
