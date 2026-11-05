@@ -1,28 +1,26 @@
-# Mystics V3.0
+# Mystics Hub
 
-A premium two-stage launcher and Rocket League crate interface.
+The current Lumber Tycoon 2 module is **Mystics LT2 v2.16** (compact Blood Red animated UI). The launcher is the entry point and loads that exact module from an immutable GitHub commit when you select **Lumber Tycoon 2**.
 
 ## Run Mystics
 
-Execute only the launcher:
+Execute this launcher command:
 
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/MysticsALT/temp/main/Mystics_Launcher.lua"))()
 ```
 
-## Startup and on-demand loading
+Then select **Lumber Tycoon 2** in the Mystics Hub. The launcher downloads and runs the pinned LT2 v2.16 module. It does not run an older embedded copy.
 
-- Startup creates only the Mystics Hub launcher.
-- The RL Crate experience is not downloaded or initialized at startup.
-- Clicking **RL Crate Unboxing** downloads `RLCrate.lua` from the immutable commit pinned in `Mystics_Launcher.lua`.
-- The launcher checks the response, compiles it, and then executes it.
-- If loading fails, the hub remains available and the button can be retried.
+## Current files
 
-## Files
+- `Mystics_Launcher.lua` — Mystics Hub entry point and on-demand module loader.
+- `LT2.lua` — Lumber Tycoon 2 module, v2.16.
+- `RLCrate.lua` — separate RL Crate experience module.
+- `backups/` — retained backups.
 
-- `Mystics_Launcher.lua` — premium hub, launcher UI and lazy loader.
-- `RLCrate.lua` — RL Crate interface, themes, statistics and automation.
-- `backups/Mystics_Launcher_pre_V3.lua` — pre-refresh launcher backup.
-- `backups/RLCrate_pre_V3.lua` — pre-refresh crate module backup.
+## Version / loading notes
 
-The V3 refresh is cosmetic. Core reward detection, value tracking, automation and Anti-AFK logic were intentionally left unchanged.
+- The launcher pins the LT2 module to commit `29e8220416cb619df8f43d2c09d08e520e31a71e`.
+- The launcher checks for the `V2.16 | Self-contained` module marker before executing.
+- To update the LT2 experience, update `LT2.lua`, then update the pinned commit and version marker in `Mystics_Launcher.lua`.
