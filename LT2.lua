@@ -621,84 +621,209 @@ makeButton(Travel, "SAVE CURRENT POSITION", function()
     notify("Saved current position: " .. name)
 end, "cta")
 
--- Read-only player-owned asset inventory. No ownership or save manipulation.
-local function belongsToLocal(obj)
+-- Local-only lumber inspector. LT2 usually stores loose wood as "Loose_..."
+-- in Workspace.LogModels, and milled "Plank" models in PlayerModels.
+-- Do not label unowned items as owned or modify any server object/remotes.
+local function ownerIsLocal(value)
+    if value == LocalPlayer or value == LocalPlayer.UserId or value == LocalPlayer.Name then
+        return true
+    end
+    if type(value) == "number" then return value == LocalPlayer.UserId end
+    if type(value) == "string" then
+        local name = string.lower(value)
+        return name == string.lower(LocalPlayer.Name)
+            or name == tostring(LocalPlayer.UserId)
+    end
+    return false
+end
+local function readOwnerValue(obj)
     local owner = obj:FindFirstChild("Owner")
-    if not owner then return false end
-    local value = owner.Value
-    return value == LocalPlayer or value == LocalPlayer.Name
+    if not owner then
+        -- Occasionally an ownership value is stored within a nested model.
+        owner = obj:FindFirstChild("Owner", true)
+    end
+    if owner and owner:IsA("ValueBase") then
+        return owner.Value, true
+    end
+    for _, attr in ipairs({"OwnerUserId", "OwnerId", "OwnerName", "Owner"}) do
+        local value = obj:GetAttribute(attr)
+        if value ~= nil then return value, true end
+    end
+    return nil, false
+end
+local function belongsToLocal(obj)
+    local value, exists = readOwnerValue(obj)
+    return exists and ownerIsLocal(value)
 end
 local function findOwnedObjects()
     local found, seen = {}, {}
-    for _, folderName in ipairs({"PlayerModels", "LogModels"}) do
-        local folder = Workspace:FindFirstChild(folderName)
-        if folder then
-            local checked = 0
-            for _, obj in ipairs(folder:GetChildren()) do
-                checked += 1
-                if checked > 1800 then break end
-                if (obj:IsA("Model") or obj:IsA("BasePart"))
-                    and not seen[obj] and belongsToLocal(obj) then
-                    seen[obj] = true
-                    local item = obj:FindFirstChild("ItemName")
-                    local descriptor = item and tostring(item.Value) or obj.Name
-                    local text = string.lower(descriptor .. " " .. obj.Name)
-                    if text:find("wood",1,true) or text:find("log",1,true)
-                        or text:find("plank",1,true) then
-                        table.insert(found, {model=obj, name=descriptor})
+    local stats = {
+        scanned = 0, woodModels = 0, withOwner = 0,
+        ownedWood = 0, logs = 0, planks = 0,
+        roots = {}, truncated = false
+    }
+    local rootNames = {"LogModels", "PlayerModels", "WoodModels", "PlankModels"}
+
+    local function inspect(obj, rootName)
+        if seen[obj] or not (obj:IsA("Model") or obj:IsA("BasePart")) then return end
+        seen[obj] = true
+        local lowerName = string.lower(obj.Name)
+        local isLog = rootName == "LogModels" and (
+            string.sub(obj.Name, 1, 6) == "Loose_" or
+            obj:FindFirstChild("WoodSection") ~= nil or
+            obj:FindFirstChild("TreeClass") ~= nil
+        )
+        local isPlank = lowerName == "plank" or
+            (rootName == "PlankModels" and obj:IsA("Model"))
+        local isWood = isLog or isPlank
+            or string.find(lowerName, "wood", 1, true) ~= nil
+            or string.find(lowerName, "log", 1, true) ~= nil
+            or (rootName == "PlayerModels" and (
+                obj:FindFirstChild("WoodSection") ~= nil or
+                obj:FindFirstChild("TreeClass") ~= nil
+            ))
+        if not isWood then return end
+
+        stats.woodModels += 1
+        local value, hasOwner = readOwnerValue(obj)
+        if hasOwner and value ~= nil then stats.withOwner += 1 end
+        if not hasOwner or not ownerIsLocal(value) then return end
+
+        -- A highlight cannot render if there is no geometry in the model.
+        local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+        if not part then return end
+        stats.ownedWood += 1
+        local kind = isPlank and "PLANK" or (isLog and "LOG" or "WOOD")
+        if kind == "PLANK" then stats.planks += 1
+        elseif kind == "LOG" then stats.logs += 1 end
+        local class = obj:FindFirstChild("TreeClass") or obj:FindFirstChild("ItemName")
+        local species = class and class:IsA("ValueBase") and tostring(class.Value) or ""
+        if species == "" or species == "nil" then species = obj.Name end
+        table.insert(found, {
+            model = obj, kind = kind,
+            name = kind .. "  /  " .. string.sub(species, 1, 42)
+        })
+    end
+
+    -- Bounded per root, with no workspace-wide descendant scan.
+    for _, name in ipairs(rootNames) do
+        local root = Workspace:FindFirstChild(name)
+        if root then
+            stats.roots[#stats.roots + 1] = name
+            local children = root:GetChildren()
+            for i, obj in ipairs(children) do
+                if i > 2200 then stats.truncated = true; break end
+                stats.scanned += 1
+                if obj:IsA("Folder") then
+                    for j, nested in ipairs(obj:GetChildren()) do
+                        if j > 700 then stats.truncated = true; break end
+                        stats.scanned += 1
+                        inspect(nested, name)
                     end
+                else
+                    inspect(obj, name)
                 end
             end
         end
     end
-    return found
+    return found, stats
 end
-local Wood = pages.WOOD
-section(Wood, "YOUR MATERIALS",
-    "Inspects locally visible models owned by you. No item-moving remotes.")
-local WoodCount = info(Wood, "LOGS / PLANKS DETECTED:  --", 50, "text")
-local WoodDescription = info(Wood,
-    "Your five most recent visible material names will appear here.", 76)
-local HighlightButton
-local function refreshWood()
-    local found = findOwnedObjects()
-    WoodCount.Text = "OWNED WOOD-LIKE MODELS  /  " .. tostring(#found)
-    local names = {}
-    for i=1, math.min(5, #found) do names[i] = found[i].name end
-    WoodDescription.Text = #names > 0 and table.concat(names, "  •  ")
-        or "No matching owned models are currently visible to this client."
-    return found
-end
-makeButton(Wood, "REFRESH MY MATERIALS", function()
-    local found = refreshWood()
-    notify("Inspected " .. #found .. " owned wood-like models.")
-end, "cta")
-HighlightButton = makeButton(Wood, "HIGHLIGHT MY WOOD: OFF", function()
-    if #State.woodHighlights > 0 then
-        clearHighlights()
-        HighlightButton.Text = "HIGHLIGHT MY WOOD: OFF"
-        return
-    end
-    local found = refreshWood()
-    for i=1, math.min(35, #found) do
-        pcall(function()
-            local model = found[i].model
-            local hl = Instance.new("Highlight")
-            hl.Name = "MysticsLT2LocalWoodHighlight"
-            hl.Adornee = model
-            hl.FillColor = theme().accent
-            hl.OutlineColor = theme().light
-            hl.FillTransparency = 0.82
-            hl.OutlineTransparency = 0.13
-            hl.Parent = model
-            table.insert(State.woodHighlights, hl)
-        end)
-    end
-    HighlightButton.Text = #State.woodHighlights > 0
-        and "HIGHLIGHT MY WOOD: ON" or "HIGHLIGHT MY WOOD: OFF"
-end, "card")
-info(Wood, "Inspection and highlighting do not transfer, duplicate, delete or sell items. A missing item is not proof it no longer exists.", 74)
 
+local Wood = pages.WOOD
+section(Wood, "LUMBER INSPECTOR",
+    "Detects your Loose_ logs and Plank models by ownership.")
+local WoodCount = info(Wood, "OWNED LOGS  /  --      PLANKS  /  --", 53, "text")
+local WoodDescription = info(Wood,
+    "Your owned wood types will appear here after a scan.", 82)
+local WoodDiagnostics = info(Wood,
+    "SCAN STATUS  /  NOT RUN", 79, "muted")
+local HighlightButton
+local WoodLastResults = {}
+local WoodLastStats = {}
+
+-- Keep local highlights outside item models to avoid nested render issues.
+-- Limit them to a small number for low-end devices.
+local function applyWoodHighlights()
+    clearHighlights()
+    local count = 0
+    for _, entry in ipairs(WoodLastResults) do
+        if count >= 30 then break end
+        local obj = entry.model
+        if obj and obj.Parent then
+            local ok, hl = pcall(function()
+                local marker = Instance.new("Highlight")
+                marker.Name = "MysticsLT2OwnedWoodOutline"
+                marker.Adornee = obj
+                marker.Enabled = true
+                marker.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                marker.FillColor = theme().accent
+                marker.OutlineColor = theme().light
+                marker.FillTransparency = 0.58
+                marker.OutlineTransparency = 0
+                marker.Parent = Workspace.CurrentCamera or Workspace
+                return marker
+            end)
+            if ok and hl then
+                table.insert(State.woodHighlights, hl)
+                count += 1
+            end
+        end
+    end
+    return count
+end
+local function refreshWood()
+    local found, stats = findOwnedObjects()
+    WoodLastResults, WoodLastStats = found, stats
+    WoodCount.Text = string.format(
+        "OWNED LOGS  /  %d      PLANKS  /  %d      TOTAL  /  %d",
+        stats.logs, stats.planks, #found
+    )
+    local names = {}
+    for i = 1, math.min(6, #found) do names[i] = found[i].name end
+    WoodDescription.Text = #names > 0 and table.concat(names, "\n")
+        or "No owned wood found. Check the diagnostics below."
+    local roots = #stats.roots > 0 and table.concat(stats.roots, ", ")
+        or "NONE"
+    WoodDiagnostics.Text = string.format(
+        "FOLDERS: %s\nWOOD CANDIDATES: %d  •  WITH OWNER: %d\nSCANNED: %d%s",
+        roots, stats.woodModels, stats.withOwner, stats.scanned,
+        stats.truncated and "  (limited)" or ""
+    )
+    if State.woodHighlightEnabled then
+        local count = applyWoodHighlights()
+        if HighlightButton then
+            HighlightButton.Text = "OWNED WOOD OUTLINES: ON  (" .. tostring(count) .. ")"
+        end
+    end
+    return found, stats
+end
+
+makeButton(Wood, "REFRESH WOOD INVENTORY", function()
+    local found, stats = refreshWood()
+    if #found == 0 then
+        notify("No owned wood detected. Check scan diagnostics and model ownership.")
+    else
+        notify("Found " .. #found .. " owned logs/planks.")
+    end
+end, "cta")
+HighlightButton = makeButton(Wood, "OWNED WOOD OUTLINES: OFF", function()
+    State.woodHighlightEnabled = not State.woodHighlightEnabled
+    if State.woodHighlightEnabled then
+        local found = refreshWood()
+        local count = #State.woodHighlights
+        HighlightButton.Text = "OWNED WOOD OUTLINES: ON  (" .. count .. ")"
+        if count == 0 then
+            notify("Nothing to outline yet. Inspect the diagnostic counts.")
+        else
+            notify("Highlighted " .. count .. " owned wood models.")
+        end
+    else
+        clearHighlights()
+        HighlightButton.Text = "OWNED WOOD OUTLINES: OFF"
+        notify("Wood outlines disabled.")
+    end
+end, "card")
+info(Wood, "Outlines are client-side only. If owned logs lose ownership or the game stops replicating a model, they cannot be counted reliably.", 82)
 -- Plot inspection is deliberately read-only except for optional local TP.
 local Plots = pages.PLOTS
 section(Plots, "PLOT INSPECTOR", "Ownership is checked before any plot destination is offered.")
