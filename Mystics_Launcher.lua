@@ -633,14 +633,17 @@ local function LaunchLT2()
     task.spawn(function()
         local ok, errorMessage = pcall(function()
             -- Commit-pinned loading avoids silently changing module contents.
-            local lt2ModuleCommit = "c60592064cf399d6fa7b3eb4c64b83c6cbf510cf"
+            local lt2ModuleCommit = "f24d8e7371e779d06445a95db7c120bfc7ce842d"
             local lt2Url = "https://raw.githubusercontent.com/MysticsALT/temp/"
                 .. lt2ModuleCommit .. "/LT2.lua"
             if type(loadstring) ~= "function" then
                 error("This environment does not provide loadstring.")
             end
             local downloaded, source = pcall(function()
-                return game:HttpGet(lt2Url)
+                -- Unique URL prevents stale HTTP responses from executors.
+                local freshUrl = lt2Url .. "?fresh=" ..
+                    game:GetService("HttpService"):GenerateGUID(false)
+                return game:HttpGet(freshUrl)
             end)
             if not downloaded then
                 error("LT2 GitHub download failed: " .. tostring(source))
@@ -648,6 +651,9 @@ local function LaunchLT2()
             if type(source) ~= "string" or #source < 8000
                 or not string.find(source, "MYSTICS | LUMBER TYCOON 2 MODULE", 1, true) then
                 error("GitHub returned an unexpected or incomplete LT2 module.")
+            end
+            if not string.find(source, "V2.6 | Self-contained", 1, true) then
+                error("Old LT2 module downloaded despite loader update; cache is stale.")
             end
             local chunk, compileError = loadstring(source, "Mystics_LT2")
             if type(chunk) ~= "function" then
