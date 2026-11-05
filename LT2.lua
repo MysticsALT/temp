@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.6 | Self-contained utility module + opt-in legacy research tests
+-- V2.7 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -257,7 +257,7 @@ Header.Active = true
 stroke(Header)
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V2.6  •  LT2 TOOLKIT + LEGACY TESTS",
+makeLabel(Header, "V2.7  •  LT2 TOOLKIT + LEGACY TESTS",
     UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
@@ -421,6 +421,7 @@ local function cleanup()
     clearHighlights()
     if State.clearToolkitHighlights then pcall(State.clearToolkitHighlights) end
     if State.restoreMovement then pcall(State.restoreMovement) end
+    if State.stopSell then pcall(State.stopSell) end
     if State.stopHarvest then pcall(State.stopHarvest) end
     if State.stopAutoCut then pcall(State.stopAutoCut) end
     if State.stopDupeTest then pcall(State.stopDupeTest) end
@@ -1414,7 +1415,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.6 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.7 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -2076,6 +2077,101 @@ local HarvestStopButton = makeButton(toolkit, "STOP HARVEST / RETURN ME", functi
 end, "quiet")
 HarvestStopButton.LayoutOrder = -191
 
+-- Sell only loose logs that are currently owned by the local player.
+-- The drop-off position is taken from existing community LT2 sell routines.
+section(toolkit, "WOOD DROP-OFF", "Send your owned cut logs to the Wood R Us drop-off.")
+local SellStatus = info(toolkit, "AUTO SELL / READY", 66, "text")
+local sellRunning = false
+local sellToken = 0
+local function stopSell(message)
+    sellToken += 1
+    sellRunning = false
+    if not State.closed then SellStatus.Text = "AUTO SELL / " .. (message or "STOPPED") end
+end
+State.stopSell = function() stopSell("CLOSED") end
+local SellWoodButton = makeButton(toolkit, "SELL MY CUT WOOD", function()
+    if sellRunning or harvestRunning or cuttingActive then
+        notify("Finish the current harvest/cutting action first."); return
+    end
+    local logFolder = Workspace:FindFirstChild("LogModels")
+    if not logFolder then SellStatus.Text = "AUTO SELL / LOGMODELS NOT FOUND"; return end
+    local interaction = game:GetService("ReplicatedStorage"):FindFirstChild("Interaction")
+    local drag = interaction and interaction:FindFirstChild("ClientIsDragging", true)
+    if not drag or not drag:IsA("RemoteEvent") then
+        SellStatus.Text = "AUTO SELL / CLIENTISDRAGGING REMOTE MISSING"; return
+    end
+    local owned = {}
+    for _, log in ipairs(logFolder:GetChildren()) do
+        if log:IsA("Model") and string.sub(log.Name,1,6) == "Loose_"
+            and belongsToLocal(log) then
+            local sectionPart = log:FindFirstChild("WoodSection")
+                or log:FindFirstChild("WoodSection", true)
+            if sectionPart and sectionPart:IsA("BasePart") then
+                owned[#owned+1] = {model=log,part=sectionPart}
+            end
+        end
+    end
+    if #owned == 0 then
+        SellStatus.Text = "AUTO SELL / NO OWNED CUT LOGS FOUND"; return
+    end
+    sellRunning = true
+    sellToken += 1
+    local token = sellToken
+    task.spawn(function()
+        local sold, uncertain, skipped = 0, 0, 0
+        -- Historical LT2 community scripts target the Wood Drop-off here.
+        local dropCFrame = CFrame.new(315, -0.296, 85.791)
+            * CFrame.Angles(math.rad(90),0,0)
+        for index, entry in ipairs(owned) do
+            if not sellRunning or sellToken ~= token or State.closed then break end
+            local log, part = entry.model, entry.part
+            if not log.Parent or not part.Parent or not belongsToLocal(log) then
+                skipped += 1
+            else
+                SellStatus.Text = "AUTO SELL / SENDING LOG "..index.."/"..#owned
+                local moved = pcall(function()
+                    for attempt=1,10 do
+                        if not sellRunning or sellToken ~= token then break end
+                        if not log.Parent or not part.Parent then break end
+                        part.CFrame = dropCFrame
+                        drag:FireServer(log)
+                        task.wait(0.08)
+                    end
+                    for attempt=1,20 do
+                        if not sellRunning or sellToken ~= token then break end
+                        if not log.Parent then break end
+                        drag:FireServer(log)
+                        task.wait(0.06)
+                    end
+                end)
+                if not moved then
+                    skipped += 1
+                else
+                    -- Sale normally removes the log from LogModels.
+                    local deadline = os.clock()+5
+                    while sellRunning and sellToken==token and log.Parent
+                        and os.clock()<deadline do task.wait(0.2) end
+                    if not log.Parent then sold += 1
+                    else uncertain += 1 end
+                end
+            end
+        end
+        if sellToken == token then
+            sellRunning = false
+            if not State.closed then
+                SellStatus.Text = "AUTO SELL / REMOVED "..sold
+                    .." | STILL PRESENT "..uncertain.." | SKIPPED "..skipped
+            end
+        end
+    end)
+end, "cta")
+SellWoodButton.LayoutOrder = -190
+local SellStopButton = makeButton(toolkit, "STOP AUTO SELL", function()
+    if sellRunning then stopSell("STOPPED")
+    else notify("Auto sell is not running.") end
+end, "quiet")
+SellStopButton.LayoutOrder = -189
+
 local function nextCutTarget(species, ignored)
     local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not root then return nil end
@@ -2487,4 +2583,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.6 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v2.7 ready. Historical waypoints are unverified.")
