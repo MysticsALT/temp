@@ -102,16 +102,16 @@ local Themes = {
         Icon = "*",
         Tag = "THE OBSIDIAN SIGNATURE COLLECTION",
         Decoration = {"*", "+", "."},
-        Background = Color3.fromRGB(28, 34, 49),
-        Panel = Color3.fromRGB(45, 53, 71),
-        Panel2 = Color3.fromRGB(65, 76, 99),
-        Text = Color3.fromRGB(245, 242, 234),
-        Muted = Color3.fromRGB(190, 201, 219),
-        Accent = Color3.fromRGB(103, 128, 164),
-        Accent2 = Color3.fromRGB(219, 231, 245),
-        Border = Color3.fromRGB(130, 158, 195),
-        GradientA = Color3.fromRGB(86, 102, 130),
-        GradientB = Color3.fromRGB(28, 34, 49)
+        Background = Color3.fromRGB(36, 42, 58),
+        Panel = Color3.fromRGB(56, 65, 85),
+        Panel2 = Color3.fromRGB(78, 89, 113),
+        Text = Color3.fromRGB(248, 250, 255),
+        Muted = Color3.fromRGB(215, 223, 235),
+        Accent = Color3.fromRGB(126, 166, 255),
+        Accent2 = Color3.fromRGB(176, 204, 255),
+        Border = Color3.fromRGB(143, 166, 205),
+        GradientA = Color3.fromRGB(102, 118, 146),
+        GradientB = Color3.fromRGB(36, 42, 58)
     },
 
     {
@@ -119,16 +119,16 @@ local Themes = {
         Icon = "◆",
         Tag = "THE RUBY COLLECTION",
         Decoration = {"◆", "♦", "✦"},
-        Background = Color3.fromRGB(42, 12, 24),
-        Panel = Color3.fromRGB(85, 27, 47),
-        Panel2 = Color3.fromRGB(119, 39, 67),
-        Text = Color3.fromRGB(255, 245, 247),
-        Muted = Color3.fromRGB(231, 185, 199),
-        Accent = Color3.fromRGB(153, 31, 64),
-        Accent2 = Color3.fromRGB(226, 75, 111),
-        Border = Color3.fromRGB(181, 65, 96),
-        GradientA = Color3.fromRGB(177, 47, 82),
-        GradientB = Color3.fromRGB(42, 12, 24)
+        Background = Color3.fromRGB(54, 18, 30),
+        Panel = Color3.fromRGB(98, 36, 55),
+        Panel2 = Color3.fromRGB(132, 52, 76),
+        Text = Color3.fromRGB(255, 246, 249),
+        Muted = Color3.fromRGB(238, 209, 218),
+        Accent = Color3.fromRGB(227, 75, 118),
+        Accent2 = Color3.fromRGB(255, 156, 186),
+        Border = Color3.fromRGB(203, 101, 137),
+        GradientA = Color3.fromRGB(194, 66, 103),
+        GradientB = Color3.fromRGB(54, 18, 30)
     },
 
     {
@@ -136,16 +136,16 @@ local Themes = {
         Icon = "❄",
         Tag = "THE WINTER RESERVE COLLECTION",
         Decoration = {"❄", "✦", "✧"},
-        Background = Color3.fromRGB(15, 45, 56),
-        Panel = Color3.fromRGB(28, 79, 90),
-        Panel2 = Color3.fromRGB(41, 107, 112),
-        Text = Color3.fromRGB(250, 248, 238),
-        Muted = Color3.fromRGB(199, 229, 231),
-        Accent = Color3.fromRGB(166, 48, 60),
-        Accent2 = Color3.fromRGB(239, 207, 132),
-        Border = Color3.fromRGB(218, 195, 132),
-        GradientA = Color3.fromRGB(54, 140, 130),
-        GradientB = Color3.fromRGB(15, 45, 56)
+        Background = Color3.fromRGB(20, 52, 62),
+        Panel = Color3.fromRGB(36, 92, 102),
+        Panel2 = Color3.fromRGB(52, 118, 122),
+        Text = Color3.fromRGB(248, 255, 252),
+        Muted = Color3.fromRGB(224, 242, 239),
+        Accent = Color3.fromRGB(129, 225, 199),
+        Accent2 = Color3.fromRGB(242, 225, 168),
+        Border = Color3.fromRGB(117, 186, 172),
+        GradientA = Color3.fromRGB(70, 155, 140),
+        GradientB = Color3.fromRGB(20, 52, 62)
     },
 
     {
@@ -153,16 +153,16 @@ local Themes = {
         Icon = "🎃",
         Tag = "THE MIDNIGHT MASQUERADE COLLECTION",
         Decoration = {"🎃", "*", "+"},
-        Background = Color3.fromRGB(38, 19, 52),
-        Panel = Color3.fromRGB(79, 38, 103),
-        Panel2 = Color3.fromRGB(109, 53, 134),
-        Text = Color3.fromRGB(250, 235, 218),
-        Muted = Color3.fromRGB(218, 190, 225),
-        Accent = Color3.fromRGB(190, 83, 30),
-        Accent2 = Color3.fromRGB(247, 161, 63),
-        Border = Color3.fromRGB(157, 103, 185),
-        GradientA = Color3.fromRGB(146, 70, 174),
-        GradientB = Color3.fromRGB(38, 19, 52)
+        Background = Color3.fromRGB(46, 26, 60),
+        Panel = Color3.fromRGB(86, 50, 112),
+        Panel2 = Color3.fromRGB(114, 67, 140),
+        Text = Color3.fromRGB(255, 247, 240),
+        Muted = Color3.fromRGB(238, 217, 240),
+        Accent = Color3.fromRGB(255, 166, 84),
+        Accent2 = Color3.fromRGB(255, 204, 132),
+        Border = Color3.fromRGB(184, 126, 211),
+        GradientA = Color3.fromRGB(154, 89, 194),
+        GradientB = Color3.fromRGB(46, 26, 60)
     }
 }
 
@@ -445,13 +445,13 @@ VisualFX.TabShell.Name = "TabNavigationShell"
 VisualFX.TabShell.Position = TabBar.Position
 VisualFX.TabShell.Size = TabBar.Size
 VisualFX.TabShell.BackgroundColor3 = Theme.Panel
-VisualFX.TabShell.BackgroundTransparency = 0.18
+VisualFX.TabShell.BackgroundTransparency = 0.07
 VisualFX.TabShell.BorderSizePixel = 0
 VisualFX.TabShell.ZIndex = 2
 VisualFX.TabShell.Parent = Main
 Corner(VisualFX.TabShell, 12)
 VisualFX.TabShellStroke = Stroke(VisualFX.TabShell, Theme.Border, 1)
-VisualFX.TabShellStroke.Transparency = 0.58
+VisualFX.TabShellStroke.Transparency = 0.33
 VisualFX.TabShellGradient = Gradient(VisualFX.TabShell, Theme.Panel2, Theme.Panel, 90)
 VisualFX.TabShellGradient.Transparency = NumberSequence.new({
     NumberSequenceKeypoint.new(0, 0.04),
@@ -480,13 +480,13 @@ VisualFX.ContentShell.Name = "ContentGlassShell"
 VisualFX.ContentShell.Position = UDim2.fromOffset(12, 145)
 VisualFX.ContentShell.Size = UDim2.new(1, -24, 1, -157)
 VisualFX.ContentShell.BackgroundColor3 = Theme.Panel
-VisualFX.ContentShell.BackgroundTransparency = 0.14
+VisualFX.ContentShell.BackgroundTransparency = 0.06
 VisualFX.ContentShell.BorderSizePixel = 0
 VisualFX.ContentShell.ZIndex = 1
 VisualFX.ContentShell.Parent = Main
 Corner(VisualFX.ContentShell, 16)
 VisualFX.ContentShellStroke = Stroke(VisualFX.ContentShell, Theme.Border, 1)
-VisualFX.ContentShellStroke.Transparency = 0.62
+VisualFX.ContentShellStroke.Transparency = 0.38
 VisualFX.ContentShellGradient = Gradient(VisualFX.ContentShell, Theme.Panel2, Theme.Panel, 90)
 VisualFX.ContentShellGradient.Transparency = NumberSequence.new({
     NumberSequenceKeypoint.new(0, 0.04),
@@ -563,11 +563,11 @@ local function SelectPage(name)
     end
     for tabName, button in pairs(TabButtons) do
         local selected = tabName == name
-        button.BackgroundColor3 = selected and Theme.Accent or Theme.Panel2
+        button.BackgroundColor3 = selected and Theme.Panel2 or Theme.Panel
         button.TextColor3 = selected and Theme.Text or Theme.Muted
         local stroke = button:FindFirstChildOfClass("UIStroke")
         if stroke then
-            stroke.Transparency = selected and 0.05 or 0.55
+            stroke.Transparency = selected and 0.02 or 0.36
             stroke.Color = Theme.Border
         end
         local indicator = button:FindFirstChild("ActiveIndicator")
@@ -625,7 +625,7 @@ for index, definition in ipairs(tabDefinitions) do
         TweenService:Create(tabScale, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
     end)
     local tabStroke = Stroke(tab, Theme.Border, 1)
-    tabStroke.Transparency = 0.42
+    tabStroke.Transparency = 0.28
     TabButtons[definition.Name] = tab
     tab.Activated:Connect(function()
         PlayUISound(UI_CLICK_SOUND_ID, 0.20, 1)
@@ -639,7 +639,7 @@ local function Label(text, height, color)
     local l = Instance.new("TextLabel")
     l.Size = UDim2.new(1, 0, 0, height or 27)
     l.BackgroundColor3 = Theme.Panel
-    l.BackgroundTransparency = 0.16
+    l.BackgroundTransparency = 0.07
     l.BorderSizePixel = 0
     l.Text = text
     l.TextColor3 = color or Theme.Text
@@ -656,7 +656,7 @@ local function Label(text, height, color)
     l.Parent = Content
     Corner(l, 10)
     local labelStroke = Stroke(l, Theme.Border, 1)
-    labelStroke.Transparency = 0.78
+    labelStroke.Transparency = 0.55
     local labelGradient = Gradient(l, Theme.Panel2, Theme.Panel, 90)
     labelGradient.Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 0.06),
@@ -796,7 +796,7 @@ local function MakeInput(placeholder, default)
     local box = Instance.new("TextBox")
     box.Size = UDim2.new(1, 0, 0, 38)
     box.BackgroundColor3 = Theme.Panel2
-    box.BackgroundTransparency = 0.08
+    box.BackgroundTransparency = 0.04
     box.BorderSizePixel = 0
     box.TextColor3 = Theme.Text
     box.PlaceholderColor3 = Theme.Muted
@@ -1023,7 +1023,7 @@ StatsDashboard.BorderSizePixel = 0
 StatsDashboard.Parent = Content
 Corner(StatsDashboard, 11)
 local dashboardStroke = Stroke(StatsDashboard, Theme.Border, 1)
-dashboardStroke.Transparency = 0.35
+dashboardStroke.Transparency = 0.20
 
 local dashboardGrid = Instance.new("UIGridLayout")
 dashboardGrid.CellSize = UDim2.new(0.5, -6, 0, 43)
@@ -1036,12 +1036,12 @@ local function DashboardCard(order, caption, initial, accentColor)
     card.Name = caption:gsub("%W", "") .. "Card"
     card.LayoutOrder = order
     card.BackgroundColor3 = Theme.Panel
-    card.BackgroundTransparency = 0.08
+    card.BackgroundTransparency = 0.03
     card.BorderSizePixel = 0
     card.Parent = StatsDashboard
     Corner(card, 10)
     local cardStroke = Stroke(card, Theme.Border, 1)
-    cardStroke.Transparency = 0.78
+    cardStroke.Transparency = 0.53
     local cardGradient = Gradient(card, Theme.Panel2, Theme.Panel, 90)
     cardGradient.Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 0.04),
@@ -1169,7 +1169,7 @@ local function ShowImportPlusPopup(rewardNames)
     popup.Position = UDim2.fromScale(0.5, 0.035)
     popup.Size = UDim2.new(0.88, 0, 0, popupHeight)
     popup.BackgroundColor3 = Theme.Panel
-    popup.BackgroundTransparency = 0.025
+    popup.BackgroundTransparency = 0.015
     popup.BorderSizePixel = 0
     popup.ClipsDescendants = true
     popup.ZIndex = 100
