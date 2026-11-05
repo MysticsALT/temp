@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.10 | Self-contained utility module + opt-in legacy research tests
+-- V2.11 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -257,7 +257,7 @@ Header.Active = true
 stroke(Header)
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V2.10  •  LT2 TOOLKIT + LEGACY TESTS",
+makeLabel(Header, "V2.11  •  LT2 TOOLKIT + LEGACY TESTS",
     UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
@@ -1415,7 +1415,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.10 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.11 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1591,7 +1591,7 @@ local function showTreeScan()
     for _, region in ipairs(regions) do
         for _, tree in ipairs(region:GetChildren()) do
             inspected += 1
-            if inspected > 3200 then break end
+            if inspected > 20000 then break end
             if tree:IsA("Model") and tree:FindFirstChild("CutEvent") then
                 qualified += 1
                 local class = tree:FindFirstChild("TreeClass")
@@ -1608,7 +1608,7 @@ local function showTreeScan()
                             nearby += 1
                             local candidate = {obj=tree, name=species, pos=part.Position,
                                 dist=math.floor(distance)}
-                            if #treeCandidates < 100 then
+                            if #treeCandidates < 500 then
                                 treeCandidates[#treeCandidates+1] = candidate
                             else
                                 local farthest = 1
@@ -1636,7 +1636,7 @@ local function showTreeScan()
     end
     local summary = "NEARBY: "..nearby.." | TYPES MATCH: "..matching
         .."\nTREES: "..qualified.." | REGIONS: "..#regions
-        ..(inspected > 3200 and " / SCAN CAPPED" or "")
+        ..(inspected > 20000 and " / SCAN CAPPED AT 20K" or "")
     if #treeCandidates == 0 then
         summary ..= "\nNo trees within 10000 studs; try a blank species filter."
     end
@@ -1900,7 +1900,7 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
                 return
             end
             HarvestStatus.Text = "HARVEST / CUTTING; CHECKING MY WOOD"
-            local MAX_CUT_ATTEMPTS, MAX_CUT_SECONDS = 120, 95
+            local MAX_CUT_ATTEMPTS, MAX_CUT_SECONDS = 600, 600
             local cutStarted, hitCount = os.clock(), 0
             local confirmed = false
             while active() and hitCount < MAX_CUT_ATTEMPTS
@@ -2241,7 +2241,7 @@ CutStartButton = makeButton(toolkit, "START AUTO CUT / NEARBY TREES", function()
     CutStatus.Text = "AUTO CUT / STARTING..."
     task.spawn(function()
         local completed, attempts, skipped = 0, 0, {}
-        for index=1,3 do
+        for index=1,100 do
             if not cuttingActive or token ~= cuttingToken or State.closed then break end
             local target = nextCutTarget(species, skipped)
             if not target then break end
@@ -2258,7 +2258,7 @@ CutStartButton = makeButton(toolkit, "START AUTO CUT / NEARBY TREES", function()
                 local startPosition = root.Position
                 local nearbyLogs = Workspace:FindFirstChild("LogModels")
                 local countBefore = nearbyLogs and #nearbyLogs:GetChildren() or 0
-                for attempt=1,24 do
+                for attempt=1,600 do
                     if not cuttingActive or token ~= cuttingToken or State.closed then break end
                     local currentRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     local activeAxe = equippedAxe()
@@ -2288,8 +2288,8 @@ CutStartButton = makeButton(toolkit, "START AUTO CUT / NEARBY TREES", function()
                     end
                     attempts += 1
                     CutStatus.Text = "AUTO CUT / " .. target.species ..
-                        "\nTREE " .. index .. "/3  •  HIT " .. attempt .. "/24"
-                    task.wait(0.28)
+                        "\nTREE " .. index .. "/100  •  HIT " .. attempt .. "/600"
+                    task.wait(0.56)
                     if not obj.Parent or not obj:FindFirstChild("CutEvent") then
                         succeeded = true
                         break
@@ -2593,4 +2593,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.10 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v2.11 ready. Historical waypoints are unverified.")
