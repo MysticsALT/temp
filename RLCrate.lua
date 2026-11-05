@@ -2570,6 +2570,8 @@ local function ApplyTheme()
     for _, page in pairs(Pages) do
         page.ScrollBarImageColor3 = Theme.Accent
     end
+    -- ApplyTheme's shared stroke pass runs above; restore the emblem accent last.
+    VisualFX.EmblemStroke.Color = Theme.Accent2
     VisualFX.MainAuraGradient.Color = ColorSequence.new(Theme.Accent2, Theme.Background)
     VisualFX.HeaderRuleGradient.Color = ColorSequence.new(Theme.Accent2, Theme.Border)
     VisualFX.TabShellGradient.Color = ColorSequence.new(VisualFX.GlassTop, VisualFX.GlassBottom)
