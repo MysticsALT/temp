@@ -1794,7 +1794,8 @@ makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE", function()
         logListener = logRoot.ChildAdded:Connect(function(candidate)
             task.spawn(identifyLog, candidate)
         end)
-        local ok, failure = pcall(function()
+        local failure
+        local ok = pcall(function()
             HarvestStatus.Text = "HARVEST / MOVING TO HIGHLIGHTED TREE"
             local section = target.section
             if not active() or not section.Parent or not tree.Parent then return end
