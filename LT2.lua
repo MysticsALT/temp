@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.12 | Self-contained utility module + opt-in legacy research tests
+-- V2.13 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -36,11 +36,11 @@ local State = {
 local Connections, Tweens, Styled = {}, {}, {}
 local Palette = {
     MYSTICS = {
-        base = Color3.fromRGB(35, 9, 21), surface = Color3.fromRGB(65, 18, 36),
-        card = Color3.fromRGB(91, 28, 49), action = Color3.fromRGB(122, 35, 61),
-        accent = Color3.fromRGB(233, 85, 121), light = Color3.fromRGB(255, 181, 198),
-        text = Color3.fromRGB(255, 248, 252), muted = Color3.fromRGB(235, 197, 212),
-        border = Color3.fromRGB(171, 76, 105)
+        base = Color3.fromRGB(14, 17, 25), surface = Color3.fromRGB(24, 29, 41),
+        card = Color3.fromRGB(33, 40, 55), action = Color3.fromRGB(103, 42, 69),
+        accent = Color3.fromRGB(244, 91, 139), light = Color3.fromRGB(255, 174, 203),
+        text = Color3.fromRGB(248, 249, 253), muted = Color3.fromRGB(164, 174, 194),
+        border = Color3.fromRGB(66, 76, 96)
     },
     OBSIDIAN = {
         base = Color3.fromRGB(24, 29, 44), surface = Color3.fromRGB(43, 51, 73),
@@ -242,28 +242,42 @@ Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = Parent
 
 local Main = makeFrame(Gui, "MysticsLT2Window",
-    UDim2.fromOffset(526, 618), UDim2.new(0.5, -263, 0.5, -309), "base", 22)
+    UDim2.fromOffset(620, 700), UDim2.new(0.5, -310, 0.5, -350), "base", 22)
 Main.ClipsDescendants = true
-stroke(Main, "accentStroke", 1.5)
+stroke(Main, "accentStroke", 2)
+local mainGradient = Instance.new("UIGradient")
+mainGradient.Rotation = 115
+mainGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 35, 49)),
+    ColorSequenceKeypoint.new(0.55, Color3.fromRGB(16, 20, 30)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(34, 20, 34))
+})
+mainGradient.Parent = Main
+local mainTopLine = makeFrame(Main, "TopAccent", UDim2.new(1, -34, 0, 3), UDim2.fromOffset(17, 3), "accent", 2)
+mainTopLine.ZIndex = 5
 
-local Ambient = makeFrame(Main, "RubyAtmosphere", UDim2.fromOffset(220, 220),
+local Ambient = makeFrame(Main, "RubyAtmosphere", UDim2.fromOffset(280, 280),
     UDim2.fromOffset(-80, -100), "accent", 110)
 Ambient.BackgroundTransparency = 0.96
 animateForever(Ambient, 12, {Position = UDim2.fromOffset(120, 0)})
 
 local Header = makeFrame(Main, "MysticsHeader",
-    UDim2.new(1, -22, 0, 95), UDim2.fromOffset(11, 11), "surface", 16)
+    UDim2.new(1, -24, 0, 104), UDim2.fromOffset(12, 12), "surface", 16)
 Header.Active = true
 stroke(Header)
+local headerGradient = Instance.new("UIGradient")
+headerGradient.Rotation = 0
+headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
+headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
-    UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V2.12  •  LT2 TOOLKIT + LEGACY TESTS",
-    UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
+    UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
+makeLabel(Header, "V2.13  •  REFINED INTERFACE",
+    UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
-    UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
+    UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
 HeaderRule.BackgroundTransparency = 0.27
 local Emblem = makeFrame(Header, "MysticsMonogram",
-    UDim2.fromOffset(39, 39), UDim2.new(1, -104, 0, 14), "cta", 20)
+    UDim2.fromOffset(43, 43), UDim2.new(1, -110, 0, 15), "cta", 20)
 stroke(Emblem, "accentStroke", 1.4)
 local monogram = makeLabel(Emblem, "M", UDim2.fromScale(1, 1),
     UDim2.fromOffset(0, 0), 23, "text", true)
@@ -284,7 +298,7 @@ MiniButton.TextXAlignment = Enum.TextXAlignment.Center
 MiniButton.TextSize = 19
 
 local TabBar = makeFrame(Main, "TabBar",
-    UDim2.new(1, -22, 0, 43), UDim2.fromOffset(11, 115), "surface", 12)
+    UDim2.new(1, -24, 0, 48), UDim2.fromOffset(12, 128), "surface", 12)
 stroke(TabBar)
 local tabPadding = Instance.new("UIPadding")
 tabPadding.PaddingLeft = UDim.new(0, 6)
@@ -299,7 +313,7 @@ tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
 tabLayout.Parent = TabBar
 
 local Surface = makeFrame(Main, "PageSurface",
-    UDim2.new(1, -22, 1, -206), UDim2.fromOffset(11, 169), "surface", 17)
+    UDim2.new(1, -24, 1, -220), UDim2.fromOffset(12, 188), "surface", 17)
 stroke(Surface)
 local pages, tabs = {}, {}
 local function createPage(name)
@@ -364,7 +378,7 @@ for index, name in ipairs(TAB_NAMES) do
     end, "quiet", 32)
     tab.Name = name .. "Tab"
     tab.LayoutOrder = index
-    tab.Size = UDim2.fromOffset(50, 32)
+    tab.Size = UDim2.fromOffset(58, 36)
     tab.TextSize = 8
     tab.TextXAlignment = Enum.TextXAlignment.Center
     tabs[name] = tab
@@ -379,7 +393,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  /  LOCAL UTILITY MODE   •   NO REMOTE SCRIPTS",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.13",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
