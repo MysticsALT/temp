@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.8 | Self-contained utility module + opt-in legacy research tests
+-- V2.9 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -257,7 +257,7 @@ Header.Active = true
 stroke(Header)
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V2.8  •  LT2 TOOLKIT + LEGACY TESTS",
+makeLabel(Header, "V2.9  •  LT2 TOOLKIT + LEGACY TESTS",
     UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
@@ -1415,7 +1415,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.8 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.9 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1889,7 +1889,7 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
             task.wait(0.6)
             local movedRoot = character:FindFirstChild("HumanoidRootPart")
             if not active() or not movedRoot
-                or (movedRoot.Position - section.Position).Magnitude > 35 then
+                or (movedRoot.Position - section.Position).Magnitude > 10000 then
                 failure = "TELEPORT DID NOT REACH TREE"
                 return
             end
@@ -1911,7 +1911,7 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
                     break
                 end
                 local charRoot = character:FindFirstChild("HumanoidRootPart")
-                if not charRoot or (charRoot.Position - section.Position).Magnitude > 35 then
+                if not charRoot or (charRoot.Position - section.Position).Magnitude > 10000 then
                     failure = "LEFT CUTTING RANGE"; break
                 end
                 local held = equippedAxe()
@@ -2265,7 +2265,7 @@ CutStartButton = makeButton(toolkit, "START AUTO CUT / NEARBY TREES", function()
                     local nameValue = activeAxe and activeAxe:FindFirstChild("ToolName")
                     local damage = nameValue and axeDamage[tostring(nameValue.Value)]
                     if not currentRoot or not damage or not obj.Parent or not part.Parent
-                        or (currentRoot.Position - part.Position).Magnitude > 35
+                        or (currentRoot.Position - part.Position).Magnitude > 10000
                         or (currentRoot.Position - startPosition).Magnitude > 30 then
                         CutStatus.Text = "AUTO CUT / STOPPED: RANGE OR AXE CHANGED"
                         cuttingActive = false
@@ -2593,4 +2593,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.8 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v2.9 ready. Historical waypoints are unverified.")
