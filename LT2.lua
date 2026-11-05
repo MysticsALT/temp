@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.2 | Self-contained utility module + opt-in legacy research tests
+-- V2.3 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -257,7 +257,7 @@ Header.Active = true
 stroke(Header)
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V2.2  •  LT2 TOOLKIT + LEGACY TESTS",
+makeLabel(Header, "V2.3  •  LT2 TOOLKIT + LEGACY TESTS",
     UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
@@ -1414,7 +1414,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.2 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.3 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1924,88 +1924,61 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
                 failure = "DRAG REMOTES UNAVAILABLE; LOG LEFT AT TREE"
                 return
             end
-            -- Move newly cut wood pieces (not every pre-existing owned object)
-            -- one by one. Do not treat unowned wood as eligible.
+            -- Return only fresh cut wood verified as locally owned.
             local logs = newOwnedCutWood()
-            table.sort(logs, function(a,b)
-                local ap = objectPosition(a) or targetTreePosition
-                local bp = objectPosition(b) or targetTreePosition
-                return (ap-targetTreePosition).Magnitude < (bp-targetTreePosition).Magnitude
-            end)
             local delivered, failed = 0, 0
-            local maxPieces = math.min(#logs, 8)
-            for n=1,maxPieces do
+            local count = math.min(#logs, 8)
+            for n=1,count do
                 if not active() then return end
                 local log = logs[n]
-                if not log.Parent or not belongsToLocal(log) then
+                local wood = log and log:FindFirstChild("WoodSection",true)
+                if not log or not log.Parent or not belongsToLocal(log)
+                    or not wood or not wood:IsA("BasePart") then
                     failed += 1
                 else
-                    local logPart = log:FindFirstChild("WoodSection",true)
-                        or log.PrimaryPart or log:FindFirstChildWhichIsA("BasePart",true)
-                    if not logPart or not logPart:IsA("BasePart") then
-                        failed += 1
-                    else
-                        local destination = (startCFrame * CFrame.new(6+n*3, 4, 0)).Position
-                        local origin = logPart.Position
-                        local steps = math.max(1,math.ceil((destination-origin).Magnitude/24))
-                        if steps > 90 then
-                            failed += 1
-                        else
-                            local pieceOk = true
-                            for step=1,steps do
-                                if not active() then return end
-                                if not log.Parent or not belongsToLocal(log) then
-                                    pieceOk = false; break
-                                end
-                                local point = origin:Lerp(destination,step/steps)
-                                if character.Parent and humanoid.Health > 0 then
-                                    pcall(function() character:PivotTo(CFrame.new(point+Vector3.new(4,3,4))) end)
-                                end
-                                local moved = false
-                                for retry=1,4 do
-                                    if not active() then return end
-                                    local ok = pcall(function()
-                                        ownershipRemote:FireServer(log)
-                                        dragRemote:FireServer(log)
-                                        -- For LT2 logs, update the physical section first.
-                                        local count = 0
-                                        for _, part in ipairs(log:GetDescendants()) do
-                                            if part:IsA("BasePart") then count += 1 end
-                                        end
-                                        if count > 1 then log:MoveTo(point)
-                                        else logPart.CFrame = CFrame.new(point)*logPart.CFrame.Rotation end
-                                        dragRemote:FireServer(log)
-                                    end)
-                                    task.wait(0.32)
-                                    if ok and logPart.Parent and (logPart.Position-point).Magnitude < 12 then
-                                        moved = true; break
-                                    end
-                                end
-                                if not moved then pieceOk = false; break end
-                                HarvestStatus.Text = "HARVEST / OWNED WOOD "..n.."/"..maxPieces
-                                    .."\nMOVING "..step.."/"..steps
+                    local destination = startCFrame * CFrame.new(7+n*4, 4, 0)
+                    local oldPrimary = log.PrimaryPart
+                    local success = pcall(function() log.PrimaryPart = wood end)
+                    HarvestStatus.Text = "HARVEST / RETURNING OWNED WOOD " .. n .. "/" .. count
+                    if success then
+                        for frame=1,70 do
+                            if not active() or not log.Parent
+                                or not belongsToLocal(log) then break end
+                            if frame == 1 and character.Parent then
+                                character:PivotTo(CFrame.new(wood.Position + Vector3.new(5,3,5)))
                             end
-                            -- Observe after updates to catch obvious corrections.
-                            if pieceOk then
-                                task.wait(2)
-                                pieceOk = logPart.Parent and belongsToLocal(log)
-                                    and (logPart.Position-destination).Magnitude < 18
-                            end
-                            if pieceOk then delivered += 1 else failed += 1 end
+                            pcall(function()
+                                ownershipRemote:FireServer(log)
+                                dragRemote:FireServer(log)
+                                log:PivotTo(destination)
+                                dragRemote:FireServer(log)
+                            end)
+                            task.wait(0.045)
                         end
+                        task.wait(2.5)
+                        local position = wood.Parent and wood.Position
+                        if position and (position-destination.Position).Magnitude < 18
+                            and belongsToLocal(log) then
+                            delivered += 1
+                        else
+                            failed += 1
+                        end
+                    else
+                        failed += 1
                     end
+                    pcall(function()
+                        if oldPrimary and oldPrimary.Parent==log then
+                            log.PrimaryPart = oldPrimary
+                        end
+                    end)
                 end
             end
-            if delivered == 0 then
-                failure = "CUT VERIFIED / 0 OF "..maxPieces
-                    .." OWNED LOGS MOVED; SERVER MAY BLOCK TRANSPORT"
+            if delivered ~= count then
+                failure = "WOOD RETURN / "..delivered.." OF "..count..
+                    " CONFIRMED LOCALLY; "..failed.." FAILED"
                 return
             end
-            if failed > 0 then
-                failure = "PARTIAL RETURN / "..delivered.." MOVED, "..failed.." FAILED"
-                return
-            end
-            HarvestStatus.Text = "HARVEST / "..delivered.." OWNED LOGS AT START (CLIENT CHECK)"
+            HarvestStatus.Text = "HARVEST / "..delivered.." OWNED LOGS AT START (LOCAL CHECK)"
         end)
         for _, listener in ipairs(logListeners) do listener:Disconnect() end
         -- Return the player even if cutting or log movement fails.
@@ -2444,4 +2417,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.2 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v2.3 ready. Historical waypoints are unverified.")
