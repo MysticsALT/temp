@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.11 | Self-contained utility module + opt-in legacy research tests
+-- V2.12 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -257,7 +257,7 @@ Header.Active = true
 stroke(Header)
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V2.11  •  LT2 TOOLKIT + LEGACY TESTS",
+makeLabel(Header, "V2.12  •  LT2 TOOLKIT + LEGACY TESTS",
     UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
@@ -1415,7 +1415,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.11 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.12 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -2258,7 +2258,7 @@ CutStartButton = makeButton(toolkit, "START AUTO CUT / NEARBY TREES", function()
                 local startPosition = root.Position
                 local nearbyLogs = Workspace:FindFirstChild("LogModels")
                 local countBefore = nearbyLogs and #nearbyLogs:GetChildren() or 0
-                for attempt=1,600 do
+                for attempt=1,2400 do
                     if not cuttingActive or token ~= cuttingToken or State.closed then break end
                     local currentRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     local activeAxe = equippedAxe()
@@ -2288,7 +2288,7 @@ CutStartButton = makeButton(toolkit, "START AUTO CUT / NEARBY TREES", function()
                     end
                     attempts += 1
                     CutStatus.Text = "AUTO CUT / " .. target.species ..
-                        "\nTREE " .. index .. "/100  •  HIT " .. attempt .. "/600"
+                        "\nTREE " .. index .. "/100  •  HIT " .. attempt .. "/2400"
                     task.wait(0.56)
                     if not obj.Parent or not obj:FindFirstChild("CutEvent") then
                         succeeded = true
@@ -2593,4 +2593,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.11 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v2.12 ready. Historical waypoints are unverified.")
