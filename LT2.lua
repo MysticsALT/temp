@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.4 | Self-contained utility module + opt-in legacy research tests
+-- V2.5 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -257,7 +257,7 @@ Header.Active = true
 stroke(Header)
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V2.4  •  LT2 TOOLKIT + LEGACY TESTS",
+makeLabel(Header, "V2.5  •  LT2 TOOLKIT + LEGACY TESTS",
     UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
@@ -1414,7 +1414,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.4 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.5 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1773,8 +1773,25 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
         HarvestStatus.Text = "HARVEST / NO WOOD MODEL FOLDERS TO VERIFY"
         return
     end
-    local dragRemote = interaction:FindFirstChild("ClientIsDragging")
-    local ownershipRemote = interaction:FindFirstChild("ClientRequestOwnership")
+    -- Resolve remotes after cutting, and tolerate LT2 versions without
+    -- the optional ownership-request remote.
+    local function findInteractionEvent(name)
+        local instance = interaction and interaction:FindFirstChild(name, true)
+        if instance and instance:IsA("RemoteEvent") then return instance end
+        return nil
+    end
+    local function remoteDescription(name)
+        local instance = interaction and interaction:FindFirstChild(name, true)
+        return instance and (instance.Name .. ":" .. instance.ClassName) or (name .. ":MISSING")
+    end
+    local dragRemote = findInteractionEvent("ClientIsDragging")
+    local ownershipRemote = findInteractionEvent("ClientRequestOwnership")
+    local function requestWoodControl(part, model)
+        if ownershipRemote then
+            pcall(function() ownershipRemote:FireServer(part) end)
+            pcall(function() ownershipRemote:FireServer(model) end)
+        end
+    end
     local logListeners = {}
     local targetTreePosition = target.section.Position
     local nearbyOwned = {}
@@ -1919,10 +1936,19 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
             discoverOwnedWood()
             HarvestStatus.Text = "HARVEST / CUT VERIFIED: " .. #newOwnedCutWood()
                 .. " NEW OWNED PIECES"
-            if not dragRemote or not dragRemote:IsA("RemoteEvent")
-                or not ownershipRemote or not ownershipRemote:IsA("RemoteEvent") then
-                failure = "DRAG REMOTES UNAVAILABLE; LOG LEFT AT TREE"
+            -- Drag notifications are essential; ownership requests are not
+            -- exposed in every LT2 session and should not abort transport.
+            dragRemote = findInteractionEvent("ClientIsDragging")
+            ownershipRemote = findInteractionEvent("ClientRequestOwnership")
+            if not dragRemote then
+                local detail = remoteDescription("ClientIsDragging") .. " / "
+                    .. remoteDescription("ClientRequestOwnership")
+                failure = "DRAG REMOTE MISSING: " .. detail
+                warn("[Mystics LT2] " .. failure)
                 return
+            end
+            if not ownershipRemote then
+                HarvestStatus.Text = "HARVEST / DRAG FOUND; OWNERSHIP REMOTE OPTIONAL"
             end
             -- Transport fresh, verified owned wood only. Some LT2 versions
             -- expect ClientRequestOwnership to receive the WoodSection, not
@@ -1951,8 +1977,7 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
                     -- Request the physical section as well as its assembly.
                     local requestStart = os.clock()
                     while active() and os.clock()-requestStart < 5 do
-                        pcall(function() ownershipRemote:FireServer(wood) end)
-                        pcall(function() ownershipRemote:FireServer(log) end)
+                        requestWoodControl(wood, log)
                         pcall(function() dragRemote:FireServer(log) end)
                         if networkCheckAvailable then
                             local ok, owns = pcall(isnetworkowner,wood)
@@ -1981,7 +2006,7 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
                         if not active() or not log.Parent or not wood.Parent
                             or not belongsToLocal(log) then break end
                         local succeeded = pcall(function()
-                            ownershipRemote:FireServer(wood)
+                            requestWoodControl(wood, log)
                             dragRemote:FireServer(log)
                             log:PivotTo(destination)
                             wood.AssemblyLinearVelocity = Vector3.zero
@@ -2461,4 +2486,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.4 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v2.5 ready. Historical waypoints are unverified.")
