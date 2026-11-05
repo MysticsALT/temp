@@ -2951,22 +2951,133 @@ local function ApplyTheme()
     VisualFX.HeaderRuleGradient.Color = ColorSequence.new(Theme.Accent2, Theme.Border)
     VisualFX.TabShellGradient.Color = ColorSequence.new(VisualFX.GlassTop, VisualFX.GlassBottom)
     VisualFX.ContentShellGradient.Color = ColorSequence.new(VisualFX.GlassTop, VisualFX.GlassBottom)
+
+    -- Keep previews individually coloured while highlighting only the active
+    -- selection. Refresh after the shared theme-styling pass above.
+    for i, info in ipairs(VisualFX.ThemeCards or {}) do
+        local selected = (i == ThemeIndex)
+        info.Stroke.Color = selected and Theme.Accent2 or info.Preset.Border
+        info.Stroke.Transparency = selected and 0.02 or 0.46
+        info.Stroke.Thickness = selected and 2 or 1
+        info.Button.BackgroundColor3 = info.Preset.Panel2
+        info.Chip.Text = selected and "SELECTED" or "APPLY"
+        info.Chip.TextColor3 = selected and Theme.Accent2 or info.Preset.Muted
+        info.Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end
     SelectPage(CurrentPageName)
 end
 
+-- Retain the old theme cycle callback for compatibility with the existing
+-- script, but use a more discoverable theme-selection gallery instead.
 ThemeButton = MakeButton(
     "THEME  /  OBSIDIAN",
     function()
-        ThemeIndex = ThemeIndex + 1
-
-        if ThemeIndex > #Themes then
-            ThemeIndex = 1
-        end
-
+        ThemeIndex = ThemeIndex % #Themes + 1
         ApplyTheme()
         Notify("Theme: " .. Theme.Name)
     end
 )
+ThemeButton.Visible = false
+
+Section("CHOOSE YOUR SIGNATURE THEME")
+VisualFX.ThemeCards = {}
+VisualFX.ThemeGallery = Instance.new("Frame")
+VisualFX.ThemeGallery.Name = "PremiumThemeGallery"
+VisualFX.ThemeGallery.Size = UDim2.new(1, 0, 0, 180)
+VisualFX.ThemeGallery.BackgroundTransparency = 1
+VisualFX.ThemeGallery.BorderSizePixel = 0
+VisualFX.ThemeGallery.ZIndex = 10
+VisualFX.ThemeGallery.Parent = Content
+VisualFX.ThemeGalleryLayout = Instance.new("UIGridLayout")
+VisualFX.ThemeGalleryLayout.CellSize = UDim2.new(0.5, -6, 0, 86)
+VisualFX.ThemeGalleryLayout.CellPadding = UDim2.fromOffset(10, 8)
+VisualFX.ThemeGalleryLayout.SortOrder = Enum.SortOrder.LayoutOrder
+VisualFX.ThemeGalleryLayout.Parent = VisualFX.ThemeGallery
+
+for index, preset in ipairs(Themes) do
+    local choice = index
+    local card = Instance.new("TextButton")
+    card.Name = "ThemePreview" .. tostring(index)
+    card.LayoutOrder = index
+    card.Size = UDim2.new(0.5, -6, 0, 86)
+    card.BackgroundColor3 = preset.Panel2
+    card.BackgroundTransparency = 0.09
+    card.BorderSizePixel = 0
+    card.Text = ""
+    card.ZIndex = 10
+    card.AutoButtonColor = false
+    card.Parent = VisualFX.ThemeGallery
+    Corner(card, 13)
+    local outline = Stroke(card, preset.Border, 1)
+    outline.Transparency = 0.46
+    local zoom = Instance.new("UIScale")
+    zoom.Parent = card
+
+    local swatch = Instance.new("Frame")
+    swatch.Name = "ThemeSwatch"
+    swatch.Position = UDim2.fromOffset(10, 10)
+    swatch.Size = UDim2.fromOffset(41, 51)
+    swatch.BackgroundColor3 = preset.Panel
+    swatch.BorderSizePixel = 0
+    swatch.ZIndex = 11
+    swatch.Parent = card
+    Corner(swatch, 9)
+    Gradient(swatch, preset.Panel2, preset.Background, 55)
+    local swatchStroke = Stroke(swatch, preset.Accent2, 1)
+    swatchStroke.Transparency = 0.24
+
+    local swatchDot = Instance.new("Frame")
+    swatchDot.Size = UDim2.fromOffset(17, 17)
+    swatchDot.AnchorPoint = Vector2.new(0.5, 0.5)
+    swatchDot.Position = UDim2.fromScale(0.5, 0.5)
+    swatchDot.BackgroundColor3 = preset.Accent
+    swatchDot.BorderSizePixel = 0
+    swatchDot.ZIndex = 12
+    swatchDot.Parent = swatch
+    Corner(swatchDot, 99)
+
+    local name = Instance.new("TextLabel")
+    name.Name = "ThemeName"
+    name.BackgroundTransparency = 1
+    name.Position = UDim2.fromOffset(60, 10)
+    name.Size = UDim2.new(1, -68, 0, 29)
+    name.Font = Enum.Font.GothamBold
+    name.Text = preset.Name
+    name.TextSize = 11
+    name.TextWrapped = true
+    name.TextColor3 = Color3.fromRGB(255, 255, 255)
+    name.TextXAlignment = Enum.TextXAlignment.Left
+    name.ZIndex = 11
+    name.Parent = card
+
+    local chip = Instance.new("TextLabel")
+    chip.Name = "SelectionStatus"
+    chip.BackgroundTransparency = 1
+    chip.Position = UDim2.fromOffset(60, 47)
+    chip.Size = UDim2.new(1, -68, 0, 16)
+    chip.Font = Enum.Font.GothamBold
+    chip.Text = "APPLY"
+    chip.TextSize = 9
+    chip.TextColor3 = preset.Muted
+    chip.TextXAlignment = Enum.TextXAlignment.Left
+    chip.ZIndex = 11
+    chip.Parent = card
+    VisualFX.ThemeCards[index] = {
+        Button = card, Stroke = outline, Label = name,
+        Chip = chip, Preset = preset
+    }
+    card.MouseEnter:Connect(function()
+        TweenService:Create(zoom, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {Scale = 1.025}):Play()
+    end)
+    card.MouseLeave:Connect(function()
+        TweenService:Create(zoom, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {Scale = 1}):Play()
+    end)
+    card.Activated:Connect(function()
+        ThemeIndex = choice
+        ApplyTheme()
+        Notify("Theme selected: " .. Themes[choice].Name)
+    end)
+end
 
 --========================================================
 -- PROFILES
