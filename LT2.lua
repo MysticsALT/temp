@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.0 | Self-contained utility module + opt-in legacy research tests
+-- V2.1 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -257,7 +257,7 @@ Header.Active = true
 stroke(Header)
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V2.0  •  LT2 TOOLKIT + LEGACY TESTS",
+makeLabel(Header, "V2.1  •  LT2 TOOLKIT + LEGACY TESTS",
     UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
@@ -1414,7 +1414,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.0 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.1 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1909,35 +1909,101 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
                 failure = "DRAG REMOTES UNAVAILABLE; LOG LEFT AT TREE"
                 return
             end
-            HarvestStatus.Text = "HARVEST / TRANSPORTING CONFIRMED WOOD"
-            local logPart = log.PrimaryPart or log:FindFirstChildWhichIsA("BasePart", true)
-            if not logPart then failure = "LOG HAS NO PART"; return end
-            local destinationCFrame = startCFrame + Vector3.new(7, 4, 0)
-            local transportOk = false
-            for attempt=1,12 do
-                if not active() or not log.Parent or not belongsToLocal(log) then break end
-                pcall(function() ownershipRemote:FireServer(log) end)
-                pcall(function()
-                    log:PivotTo(destinationCFrame)
-                    dragRemote:FireServer(log)
-                end)
-                task.wait(0.4)
-                local newPos = objectPosition(log)
-                if newPos and (newPos - destinationCFrame.Position).Magnitude <= 16 then
-                    transportOk = true
-                end
-                HarvestStatus.Text = "HARVEST / MOVING WOOD: " .. attempt .. "/12"
-            end
-            -- One immediate client-side position check is not proof that the
-            -- server accepted the transfer. Wait to catch obvious corrections.
-            task.wait(1.5)
-            local settled = log.Parent and belongsToLocal(log) and objectPosition(log)
-            if not transportOk or not settled
-                or (settled - destinationCFrame.Position).Magnitude > 20 then
-                failure = "WOOD RETURN NOT VERIFIED; SERVER MAY REJECT MOVEMENT"
+            HarvestStatus.Text = "HARVEST / REQUESTING WOOD CONTROL"
+            local logPart = log:FindFirstChild("WoodSection", true)
+                or log.PrimaryPart or log:FindFirstChildWhichIsA("BasePart", true)
+            if not logPart or not logPart:IsA("BasePart") then
+                failure = "LOG HAS NO MOVABLE PART"
                 return
             end
-            HarvestStatus.Text = "HARVEST / WOOD AT START (LOCAL CHECK)"
+            -- LT2's drag protocol expects an ownership request on the model,
+            -- then model drag notifications while moving its physical section.
+            local destination = (startCFrame * CFrame.new(7, 4, 0)).Position
+            local function logPosition()
+                if not log.Parent or not logPart.Parent then return nil end
+                return logPart.Position
+            end
+            local function atDestination(distance)
+                local pos = logPosition()
+                return pos and (pos - destination).Magnitude <= distance
+            end
+            local function sendDrag()
+                local requested = pcall(function()
+                    ownershipRemote:FireServer(log)
+                    dragRemote:FireServer(log)
+                end)
+                return requested
+            end
+            local function moveWoodTo(position)
+                if not active() or not belongsToLocal(log) then return false end
+                if not sendDrag() then return false end
+                local ok = pcall(function()
+                    local partCount = 0
+                    for _, descendant in ipairs(log:GetDescendants()) do
+                        if descendant:IsA("BasePart") then partCount += 1 end
+                    end
+                    if partCount > 1 then
+                        log:MoveTo(position)
+                    else
+                        logPart.CFrame = CFrame.new(position) * logPart.CFrame.Rotation
+                    end
+                    dragRemote:FireServer(log)
+                end)
+                return ok
+            end
+            local position = logPosition()
+            if not position then failure = "CUT WOOD DISAPPEARED"; return end
+            -- Approach the carried wood along a bounded route instead of
+            -- jumping it across the entire map in one network update.
+            local distance = (destination - position).Magnitude
+            local steps = math.ceil(distance / 32)
+            if steps > 55 then
+                failure = "WOOD TOO FAR TO RETURN IN ONE RUN"
+                return
+            end
+            local transportStarted = os.clock()
+            local interrupted = false
+            for step = 1, math.max(1,steps) do
+                if not active() or not belongsToLocal(log) or not log.Parent then
+                    interrupted = true
+                    break
+                end
+                if os.clock() - transportStarted > 80 then
+                    failure = "WOOD TRANSPORT TIMED OUT"
+                    interrupted = true
+                    break
+                end
+                local progress = step / math.max(1,steps)
+                local targetPosition = position:Lerp(destination, progress)
+                HarvestStatus.Text = "HARVEST / MOVING WOOD " .. step .. "/" .. math.max(1,steps)
+                local accepted = false
+                for retry = 1,5 do
+                    if not active() then interrupted = true; break end
+                    local moved = moveWoodTo(targetPosition)
+                    task.wait(0.3)
+                    local observed = logPosition()
+                    if moved and observed and (observed - targetPosition).Magnitude < 18 then
+                        accepted = true
+                        break
+                    end
+                end
+                if interrupted then break end
+                if not accepted then
+                    failure = "WOOD MOVEMENT BLOCKED AT STEP " .. step
+                    interrupted = true
+                    break
+                end
+            end
+            if interrupted then return end
+            -- The server may correct a locally moved object after the drag
+            -- requests stop, so don't report success immediately.
+            HarvestStatus.Text = "HARVEST / VERIFYING WOOD AT START"
+            task.wait(2.5)
+            if not atDestination(20) then
+                failure = "WOOD RETURN REJECTED / SERVER CORRECTED POSITION"
+                return
+            end
+            HarvestStatus.Text = "HARVEST / WOOD REACHED START (CLIENT VERIFIED)"
         end)
         for _, listener in ipairs(logListeners) do listener:Disconnect() end
         -- Return the player even if cutting or log movement fails.
@@ -2376,4 +2442,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.0 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v2.1 ready. Historical waypoints are unverified.")
