@@ -763,13 +763,9 @@ local function SelectPage(name)
             stroke.Transparency = selected and 0.02 or 0.36
             stroke.Color = Theme.Border
         end
-        local indicator = button:FindFirstChild("ActiveIndicator")
-        if indicator then
-            TweenService:Create(indicator, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                BackgroundTransparency = selected and 0 or 1,
-                Size = selected and UDim2.new(0.62, 0, 0, 2) or UDim2.new(0.34, 0, 0, 2)
-            }):Play()
-        end
+    end
+    if VisualFX.SlideToTab then
+        VisualFX.SlideToTab(name)
     end
 end
 
@@ -800,17 +796,6 @@ for index, definition in ipairs(tabDefinitions) do
     local tabScale = Instance.new("UIScale")
     tabScale.Scale = 1
     tabScale.Parent = tab
-    local activeIndicator = Instance.new("Frame")
-    activeIndicator.Name = "ActiveIndicator"
-    activeIndicator.AnchorPoint = Vector2.new(0.5, 1)
-    activeIndicator.Position = UDim2.new(0.5, 0, 1, -3)
-    activeIndicator.Size = UDim2.new(0.48, 0, 0, 2)
-    activeIndicator.BackgroundColor3 = Theme.Accent2
-    activeIndicator.BackgroundTransparency = 1
-    activeIndicator.BorderSizePixel = 0
-    activeIndicator.ZIndex = 5
-    activeIndicator.Parent = tab
-    Corner(activeIndicator, 2)
     tab.MouseEnter:Connect(function()
         TweenService:Create(tabScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.035}):Play()
     end)
@@ -825,6 +810,38 @@ for index, definition in ipairs(tabDefinitions) do
         SelectPage(definition.Name)
     end)
 end
+
+-- A single sliding indicator stays in the DECORATIVE SHELL.
+-- Never parent it inside TabBar, which has a UIListLayout.
+VisualFX.TabSlider = Instance.new("Frame")
+VisualFX.TabSlider.Name = "SharedSlidingTabIndicator"
+VisualFX.TabSlider.Size = UDim2.fromOffset(45, 3)
+VisualFX.TabSlider.Position = UDim2.fromOffset(22, 32)
+VisualFX.TabSlider.BackgroundColor3 = Theme.Accent2
+VisualFX.TabSlider.BorderSizePixel = 0
+VisualFX.TabSlider.ZIndex = 5
+VisualFX.TabSlider.Parent = VisualFX.TabShell
+Corner(VisualFX.TabSlider, 3)
+VisualFX.TabSliderStroke = Stroke(VisualFX.TabSlider, Theme.Accent2, 1)
+VisualFX.TabSliderStroke.Transparency = 0.32
+
+VisualFX.SlideToTab = function(name)
+    local button = TabButtons[name]
+    if not button or not button.Parent or not VisualFX.TabShell.Parent then return end
+    local offset = button.AbsolutePosition.X - VisualFX.TabShell.AbsolutePosition.X
+        + (button.AbsoluteSize.X - 45) / 2
+    if offset < 0 then return end
+    TweenService:Create(
+        VisualFX.TabSlider,
+        TweenInfo.new(0.27, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+        {Position = UDim2.fromOffset(math.floor(offset + 0.5), 32)}
+    ):Play()
+end
+task.defer(function()
+    if not Destroyed and VisualFX.TabSlider.Parent then
+        VisualFX.SlideToTab(CurrentPageName)
+    end
+end)
 
 SelectPage("OVERVIEW")
 
@@ -2754,6 +2771,8 @@ local function ApplyTheme()
     VisualFX.BorderSweep.Color = ColorSequence.new(Theme.Accent2, Theme.Border)
     VisualFX.Watermark.TextColor3 = Theme.Accent2
     VisualFX.WatermarkCaption.TextColor3 = Theme.Accent2
+    VisualFX.TabSlider.BackgroundColor3 = Theme.Accent2
+    VisualFX.TabSliderStroke.Color = Theme.Accent2
     VisualFX.MainAuraGradient.Color = ColorSequence.new(Theme.Accent2, Theme.Background)
     VisualFX.HeaderRuleGradient.Color = ColorSequence.new(Theme.Accent2, Theme.Border)
     VisualFX.TabShellGradient.Color = ColorSequence.new(VisualFX.GlassTop, VisualFX.GlassBottom)
