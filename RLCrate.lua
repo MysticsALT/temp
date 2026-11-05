@@ -2477,25 +2477,27 @@ local function ApplyTheme()
     Header.BackgroundColor3 = Theme.Panel
     VisualFX.MainAura.BackgroundColor3 = Theme.Accent2
     VisualFX.HeaderRule.BackgroundColor3 = Theme.Accent2
-    VisualFX.TabShell.BackgroundColor3 = Theme.Panel
-    VisualFX.ContentShell.BackgroundColor3 = Theme.Panel
+    VisualFX.TabShell.BackgroundColor3 = Color3.fromRGB(48, 54, 70)
+    VisualFX.ContentShell.BackgroundColor3 = Color3.fromRGB(43, 49, 64)
     VisualFX.ContentSweep.BackgroundColor3 = Theme.Accent2
+    VisualFX.EmblemStroke.Color = Theme.Accent2
+    VisualFX.EmblemGradient.Color = ColorSequence.new(Theme.Accent, Theme.Panel2)
 
     Title.TextColor3 = Theme.Text
     Subtitle.TextColor3 = Theme.Muted
     Creator.TextColor3 = Theme.Accent2
-    Decoration.Text = Theme.Icon
+    Decoration.Text = "M"
     Decoration.TextColor3 = Theme.Accent2
 
     MainStroke.Color = Theme.Border
     MainGradient.Color = ColorSequence.new(
-        Theme.GradientA,
-        Theme.GradientB
+        Theme.Background:Lerp(Theme.Panel, 0.40),
+        Theme.Background
     )
 
     HeaderGradient.Color = ColorSequence.new(
-        Theme.GradientA,
-        Theme.GradientB
+        Theme.Panel2,
+        Theme.Panel
     )
 
     ThemeButton.Text = "THEME  /  " .. Theme.Name
@@ -2528,6 +2530,9 @@ local function ApplyTheme()
         elseif obj:IsA("TextButton") then
             if obj == MinButton then
                 obj.BackgroundColor3 = Theme.Panel2
+            elseif obj:GetAttribute("MysticsGlassButton") and obj:GetAttribute("MysticsButtonTone") == "secondary" then
+                obj.BackgroundColor3 = Color3.fromRGB(59, 66, 84)
+                obj.TextColor3 = Color3.fromRGB(253, 252, 255)
             elseif obj:GetAttribute("MysticsButtonTone") == "secondary" then
                 obj.BackgroundColor3 = Theme.Panel2
                 obj.TextColor3 = Theme.Text
@@ -2544,20 +2549,22 @@ local function ApplyTheme()
         end
 
         if obj:IsA("TextLabel") and obj:GetAttribute("MysticsTextRole") then
-            if obj.BackgroundTransparency < 1 then obj.BackgroundColor3 = Theme.Panel end
+            if obj:GetAttribute("MysticsGlassLabel") then
+                obj.BackgroundColor3 = Color3.fromRGB(58, 65, 82)
+            elseif obj.BackgroundTransparency < 1 then
+                obj.BackgroundColor3 = Theme.Panel
+            end
+        end
+        if obj:IsA("Frame") and obj.Name == "ButtonAccentRail" then
+            obj.BackgroundColor3 = Theme.Accent2
         end
 
         if obj:IsA("UIStroke") and obj ~= MainStroke then
             obj.Color = Theme.Border
         end
 
-        if obj:IsA("UIGradient") and obj ~= MainGradient
-            and obj ~= HeaderGradient then
-            obj.Color = ColorSequence.new(
-                Theme.Accent2,
-                Theme.Accent
-            )
-        end
+        -- Do not recolour every gradient: doing so tinted panel surfaces
+        -- and even text-bearing buttons. Named accents update below instead.
     end
 
     for _, page in pairs(Pages) do
@@ -2565,8 +2572,8 @@ local function ApplyTheme()
     end
     VisualFX.MainAuraGradient.Color = ColorSequence.new(Theme.Accent2, Theme.Background)
     VisualFX.HeaderRuleGradient.Color = ColorSequence.new(Theme.Accent2, Theme.Border)
-    VisualFX.TabShellGradient.Color = ColorSequence.new(Theme.Panel2, Theme.Panel)
-    VisualFX.ContentShellGradient.Color = ColorSequence.new(Theme.Panel2, Theme.Panel)
+    VisualFX.TabShellGradient.Color = ColorSequence.new(VisualFX.GlassTop, VisualFX.GlassBottom)
+    VisualFX.ContentShellGradient.Color = ColorSequence.new(VisualFX.GlassTop, VisualFX.GlassBottom)
     SelectPage(CurrentPageName)
 end
 
