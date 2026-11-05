@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V1.7 | Self-contained utility module + opt-in legacy research tests
+-- V1.8 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -1414,7 +1414,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.7 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.8 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1529,9 +1529,12 @@ local function loadSettings()
     notify("Preferences loaded.")
 end
 
-section(toolkit, "TREE FINDER", "Nearby tree scan with species filter and highlighting.")
+local TreeFinderHeading = section(toolkit, "TREE FINDER", "1. Find trees, then highlight the nearest matches.")
+TreeFinderHeading.LayoutOrder = -200
 local TreeSearch = makeInput(toolkit, "Tree name filter (e.g. Oak, Birch)", "")
+TreeSearch.LayoutOrder = -199
 local TreeResult = info(toolkit, "TREE FINDER  /  READY", 116, "text")
+TreeResult.Parent.LayoutOrder = -198
 local treeCandidates = {}
 -- Shared tree discovery used by finder and auto cutter.
 -- LT2 normally creates multiple Workspace.TreeRegion models, while
@@ -1628,8 +1631,9 @@ local function showTreeScan()
     end
     TreeResult.Text = summary .. "\n" .. listText(rows, 4)
 end
-makeButton(toolkit, "SCAN TREES NEAR ME", showTreeScan, "cta")
-makeButton(toolkit, "HIGHLIGHT 12 NEAREST MATCHES", function()
+local ScanTreesButton = makeButton(toolkit, "SCAN TREES NEAR ME", showTreeScan, "cta")
+ScanTreesButton.LayoutOrder = -197
+local HighlightTreesButton = makeButton(toolkit, "HIGHLIGHT 12 NEAREST MATCHES", function()
     clearToolkitHighlights()
     for i=1, math.min(#treeCandidates,12) do
         local obj=treeCandidates[i].obj
@@ -1646,7 +1650,9 @@ makeButton(toolkit, "HIGHLIGHT 12 NEAREST MATCHES", function()
     end
     notify("Highlighted "..#toolkitHighlights.." trees.")
 end,"card")
-makeButton(toolkit, "CLEAR TREE HIGHLIGHTS", clearToolkitHighlights, "quiet")
+HighlightTreesButton.LayoutOrder = -196
+local ClearTreeButton = makeButton(toolkit, "CLEAR TREE HIGHLIGHTS", clearToolkitHighlights, "quiet")
+ClearTreeButton.LayoutOrder = -195
 
 
 --========================================================
@@ -1698,18 +1704,25 @@ end
 
 -- Single-tree harvest return: uses an existing highlighted target.
 -- The spawned log is only moved if ownership can be confirmed as local.
-section(toolkit, "HIGHLIGHTED TREE HARVEST",
-    "Teleport to nearest highlighted tree, cut one, then return with its log.")
+local HarvestHeading = section(toolkit, "HIGHLIGHTED TREE HARVEST",
+    "2. Harvest highlighted tree and return to your starting position.")
+HarvestHeading.LayoutOrder = -194
 local HarvestStatus = info(toolkit, "HARVEST / IDLE", 122, "text")
+HarvestStatus.Parent.LayoutOrder = -193
 local harvestRunning = false
 local harvestToken = 0
+local harvestOrigin, harvestCharacter = nil, nil
 local function stopHarvest(message)
     harvestToken += 1
     harvestRunning = false
+    if harvestOrigin and harvestCharacter and harvestCharacter.Parent then
+        pcall(function() harvestCharacter:PivotTo(harvestOrigin) end)
+    end
+    harvestOrigin, harvestCharacter = nil, nil
     if not State.closed then HarvestStatus.Text = "HARVEST / " .. (message or "STOPPED") end
 end
 State.stopHarvest = function() stopHarvest("CLOSED") end
-makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE", function()
+local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE", function()
     if harvestRunning or cuttingActive then
         notify("Stop other cutting activity before harvesting.")
         return
@@ -1749,6 +1762,7 @@ makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE", function()
         notify("Cutting remote not available."); return
     end
     local startCFrame = root.CFrame
+    harvestOrigin, harvestCharacter = startCFrame, character
     local tree = target.tree
     local treeType = tree:FindFirstChild("TreeClass")
     local species = treeType and treeType:IsA("ValueBase") and tostring(treeType.Value) or nil
@@ -1890,6 +1904,7 @@ makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE", function()
             end
         end)
         if token == harvestToken then
+            harvestOrigin, harvestCharacter = nil, nil
             harvestRunning = false
             if not State.closed then
                 HarvestStatus.Text = "HARVEST / " ..
@@ -1900,10 +1915,12 @@ makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE", function()
         end
     end)
 end, "cta")
-makeButton(toolkit, "STOP HARVEST / RETURN ME", function()
+HarvestStartButton.LayoutOrder = -192
+local HarvestStopButton = makeButton(toolkit, "STOP HARVEST / RETURN ME", function()
     if harvestRunning then stopHarvest("STOPPED / RETURNING")
     else notify("No highlighted-tree harvest is running.") end
 end, "quiet")
+HarvestStopButton.LayoutOrder = -191
 
 local function nextCutTarget(species, ignored)
     local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -2061,30 +2078,6 @@ makeButton(toolkit,"SCAN MY AXES",function()
     end
     AxeResult.Text="TOOLS: "..#axes.." / HISTORICAL TIERS NOT VERIFIED\n"..listText(rows,5)
 end,"cta")
-
-section(toolkit,"ITEM CATALOGUE", "Search known historical identifiers; catalogue is not an item spawner.")
-local CatalogInput=makeInput(toolkit,"Search items or categories","")
-local CatalogResult=info(toolkit,"CATALOGUE  /  ENTER A SEARCH",135,"text")
-local catalogue={
-    {"Axe1","Axes"},{"Axe2","Axes"},{"Axe3","Axes"},{"SilverAxe","Axes"},
-    {"Rukiryaxe","Axes"},{"FireAxe","Axes"},{"ManyAxe","Axes"},
-    {"EndTimesAxe","Axes"},{"Beesaxe","Axes"},{"CandyCaneAxe","Axes"},
-    {"Sawmill","Machinery"},{"Sawmill2","Machinery"},{"Sawmill3","Machinery"},
-    {"Sawmill4","Machinery"},{"UtilityTruck","Vehicles"},{"UtilityTruck2","Vehicles"},
-    {"Trailer","Vehicles"},{"Trailer2","Vehicles"},{"Conveyor","Machinery"},
-    {"StraightConveyor","Machinery"},{"TiltConveyor","Machinery"},
-    {"PropertySoldSign","Building"},{"WoodChecker","Machinery"}
-}
-makeButton(toolkit,"SEARCH ITEM CATALOGUE",function()
-    local query=string.lower(CatalogInput.Text)
-    local matches={}
-    for _,entry in ipairs(catalogue) do
-        if query=="" or string.find(string.lower(entry[1].." "..entry[2]),query,1,true) then
-            matches[#matches+1]=entry[1].." / "..entry[2]
-        end
-    end
-    CatalogResult.Text="KNOWN IDENTIFIERS: "..#matches.."\n"..listText(matches,7)
-end,"card")
 
 section(toolkit,"OWNED VEHICLES", "Locate vehicles in replicated player models.")
 local VehicleResult=info(toolkit,"VEHICLES  /  NOT SCANNED",112,"text")
@@ -2316,36 +2309,6 @@ makeButton(toolkit, "COUNT VISIBLE WOOD TYPES", function()
         .. "\n" .. listText(rows, 6)
 end, "cta")
 
-section(toolkit, "OWNED OBJECT OVERVIEW",
-    "Counts items you own by category; ownership data must be replicated.")
-local OwnedOverview = info(toolkit, "OWNED OBJECTS / NOT SCANNED", 130, "text")
-makeButton(toolkit, "SUMMARIZE MY OBJECTS", function()
-    local results = findModels(function(obj) return ownedModel(obj) end, 350)
-    local counts = {Wood=0, Vehicle=0, Machine=0, Building=0, Other=0}
-    for _, obj in ipairs(results) do
-        local name = string.lower(shortName(obj))
-        if name:find("log",1,true) or name:find("plank",1,true)
-            or name:find("wood",1,true) then
-            counts.Wood += 1
-        elseif name:find("truck",1,true) or name:find("car",1,true)
-            or name:find("trailer",1,true) then
-            counts.Vehicle += 1
-        elseif name:find("sawmill",1,true) or name:find("conveyor",1,true) then
-            counts.Machine += 1
-        elseif name:find("wall",1,true) or name:find("blueprint",1,true)
-            or name:find("floor",1,true) then
-            counts.Building += 1
-        else
-            counts.Other += 1
-        end
-    end
-    OwnedOverview.Text = "OWNED MATCHES: " .. #results
-        .. (#results >= 350 and " / CAPPED" or "") ..
-        "\nWOOD " .. counts.Wood .. "  /  VEHICLES " .. counts.Vehicle
-        .. "\nMACHINES " .. counts.Machine .. "  /  BUILD " .. counts.Building
-        .. "\nOTHER " .. counts.Other
-end, "card")
-
 section(buildPage, "LOADOUT NOTES", "Keep a short personal note for your next build or shopping trip.")
 local NotesField = makeInput(buildPage, "Project notes (max 180 characters)", "")
 makeButton(buildPage, "SAVE NOTE THIS SESSION", function()
@@ -2370,4 +2333,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v1.7 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v1.8 ready. Historical waypoints are unverified.")
