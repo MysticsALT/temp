@@ -387,7 +387,7 @@ local function CreateHubButton(label, order, isPrimary, callback)
     button.BorderSizePixel = 0
     button.AutoButtonColor = true
     button.Font = Enum.Font.GothamSemibold
-    local buttonIcons = {"📦", "🎁", "💎", "🏆", "📊", "⚙️"}
+    local buttonIcons = {"📦", "🌲", "💎", "🏆", "📊", "⚙️"}
     button.Text = ""
     button.Parent = List
     button.AutoButtonColor = false
@@ -608,8 +608,74 @@ LaunchRLCrateUnboxing = function()
     return chunk()
 end
 
+-- Button 2 has its own independent, lazy-loaded module.
+-- It is downloaded ONLY when the user explicitly chooses Lumber Tycoon 2.
+local LT2Button
+local LT2Loading = false
+local function SetLT2ButtonState(textValue, enabled)
+    if not LT2Button or not LT2Button.Parent then return end
+    local title = LT2Button:FindFirstChild("ButtonTitle")
+    if title then title.Text = textValue end
+    LT2Button.Active = enabled
+    local pill = LT2Button:FindFirstChild("StatePill")
+    local label = pill and pill:FindFirstChild("StatePillLabel")
+    if label then
+        label.Text = not enabled and "LOADING" or
+            (string.find(textValue, "Retry", 1, true) and "RETRY" or "OPEN")
+    end
+end
+
+local function LaunchLT2()
+    if not HubUnlocked or HubLaunching or HubClosing or LT2Loading or RLCrateLoading then return end
+    HubLaunching = true
+    LT2Loading = true
+    SetLT2ButtonState("Downloading Lumber Tycoon 2...", false)
+    task.spawn(function()
+        local ok, errorMessage = pcall(function()
+            -- Commit-pinned loading avoids silently changing module contents.
+            local lt2ModuleCommit = "97d0990131b38bf7ad7ec9656389130fcdfd3eca"
+            local lt2Url = "https://raw.githubusercontent.com/MysticsALT/temp/"
+                .. lt2ModuleCommit .. "/LT2.lua"
+            if type(loadstring) ~= "function" then
+                error("This environment does not provide loadstring.")
+            end
+            local downloaded, source = pcall(function()
+                return game:HttpGet(lt2Url)
+            end)
+            if not downloaded then
+                error("LT2 GitHub download failed: " .. tostring(source))
+            end
+            if type(source) ~= "string" or #source < 8000
+                or not string.find(source, "MYSTICS | LUMBER TYCOON 2 MODULE", 1, true) then
+                error("GitHub returned an unexpected or incomplete LT2 module.")
+            end
+            local chunk, compileError = loadstring(source, "Mystics_LT2")
+            if type(chunk) ~= "function" then
+                error("LT2 compile error: " .. tostring(compileError))
+            end
+            return chunk()
+        end)
+
+        LT2Loading = false
+        if not ok then
+            warn("[Mystics Hub] LT2 load failed: " .. tostring(errorMessage))
+            HubLaunching = false
+            SetLT2ButtonState("Retry Lumber Tycoon 2", true)
+            pcall(function()
+                game:GetService("StarterGui"):SetCore("SendNotification", {
+                    Title = "MYSTICS HUB",
+                    Text = "LT2 could not load. Check the console and try again.",
+                    Duration = 5
+                })
+            end)
+            return
+        end
+        CloseHub()
+    end)
+end
+
 RLCrateButton = CreateHubButton("RL Crate Unboxing", 1, true, LaunchSelectedExperience)
-CreateHubButton("Reward Collection", 2, false, nil)
+LT2Button = CreateHubButton("Lumber Tycoon 2", 2, true, LaunchLT2)
 CreateHubButton("Premium Items", 3, false, nil)
 CreateHubButton("Achievements", 4, false, nil)
 CreateHubButton("Statistics", 5, false, nil)
