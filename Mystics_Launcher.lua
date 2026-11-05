@@ -580,7 +580,7 @@ end
 
 LaunchRLCrateUnboxing = function()
     -- Immutable commit pin: main-branch changes cannot silently alter this module.
-    local moduleCommit = "a2f3ab00db94cbf5b24ebfbf4b6c7997b51ef98b"
+    local moduleCommit = "fc2509019dcd3d7f68eeaba458d36d4a238fb0fc"
     local moduleUrl = "https://raw.githubusercontent.com/MysticsALT/temp/" .. moduleCommit .. "/RLCrate.lua"
 
     if type(loadstring) ~= "function" then
