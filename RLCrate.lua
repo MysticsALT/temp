@@ -1429,6 +1429,10 @@ local function DashboardCard(order, caption, initial, accentColor)
     value.TextXAlignment = Enum.TextXAlignment.Left
     value.Text = initial
     value.Parent = card
+    local valueScale = Instance.new("UIScale")
+    valueScale.Name = "StatChangeScale"
+    valueScale.Scale = 1
+    valueScale.Parent = value
     return value
 end
 
@@ -1691,6 +1695,63 @@ local function ShowImportPlusPopup(rewardNames)
         end
     end)
 end
+-- Animate meaningful changes only; each active count-up is short-lived.
+-- Kept separate from reward calculations so rarity/value logic is untouched.
+VisualFX.StatAnimations = {}
+VisualFX.AnimateStat = function(label, targetText)
+    if Destroyed or not label or not label.Parent then return end
+    if label.Text == targetText then return end
+    local previous = VisualFX.StatAnimations[label]
+    if previous and previous.target == targetText then return end
+    if previous then
+        if previous.tween then previous.tween:Cancel() end
+        if previous.conn then previous.conn:Disconnect() end
+        if previous.value then previous.value:Destroy() end
+        VisualFX.StatAnimations[label] = nil
+    end
+
+    local scale = label:FindFirstChild("StatChangeScale")
+    if scale then
+        TweenService:Create(scale, TweenInfo.new(0.12, Enum.EasingStyle.Quad), {Scale = 1.07}):Play()
+        task.delay(0.18, function()
+            if scale.Parent then
+                TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Scale = 1}):Play()
+            end
+        end)
+    end
+
+    local number = tonumber(targetText:match("^[%d%.]+"))
+    if not number then
+        label.Text = targetText
+        return
+    end
+    local origin = tonumber(label.Text:match("^[%d%.]+")) or number
+    local fraction = targetText:match("%.(%d+)")
+    local digits = fraction and #fraction or 0
+    local suffix = targetText:match("%%$") and "%" or ""
+    local value = Instance.new("NumberValue")
+    value.Value = origin
+    local record = {value = value, target = targetText}
+    VisualFX.StatAnimations[label] = record
+    record.conn = value:GetPropertyChangedSignal("Value"):Connect(function()
+        if not label.Parent or VisualFX.StatAnimations[label] ~= record then return end
+        label.Text = string.format("%." .. tostring(digits) .. "f", value.Value) .. suffix
+    end)
+    record.tween = TweenService:Create(
+        value, TweenInfo.new(0.48, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+        {Value = number}
+    )
+    record.tween.Completed:Connect(function()
+        if record.conn then record.conn:Disconnect() end
+        if VisualFX.StatAnimations[label] == record then
+            label.Text = targetText
+            VisualFX.StatAnimations[label] = nil
+        end
+        value:Destroy()
+    end)
+    record.tween:Play()
+end
+
 RefreshAnalytics = function()
     local total = TotalItemsDetected
     local importPlus = RarityCounts.Import + RarityCounts.BlackMarket
@@ -1708,12 +1769,12 @@ RefreshAnalytics = function()
     RarityRateLabel.Text = string.format("IMPORT+ REWARD RATE     %.1f%%", importPlusRate)
 
     local elapsed = math.max(1, os.clock() - SessionStart)
-    DashItems.Text = tostring(total)
-    DashCycles.Text = tostring(CompletedCycles)
-    DashImportRate.Text = string.format("%.1f%%", importPlusRate)
-    DashEstValue.Text = string.format("%.2f", estimate)
-    DashBestRarity.Text = BestRarityName
-    DashCratesPerMin.Text = string.format("%.1f", CompletedCycles / (elapsed / 60))
+    VisualFX.AnimateStat(DashItems, tostring(total))
+    VisualFX.AnimateStat(DashCycles, tostring(CompletedCycles))
+    VisualFX.AnimateStat(DashImportRate, string.format("%.1f%%", importPlusRate))
+    VisualFX.AnimateStat(DashEstValue, string.format("%.2f", estimate))
+    VisualFX.AnimateStat(DashBestRarity, BestRarityName)
+    VisualFX.AnimateStat(DashCratesPerMin, string.format("%.1f", CompletedCycles / (elapsed / 60)))
 
     local goal = math.max(0, math.floor(tonumber(GoalInput.Text) or 0))
     if goal > 0 then
