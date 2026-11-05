@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V1.4 | Self-contained utility module + opt-in legacy research tests
+-- V1.5 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -421,6 +421,7 @@ local function cleanup()
     clearHighlights()
     if State.clearToolkitHighlights then pcall(State.clearToolkitHighlights) end
     if State.restoreMovement then pcall(State.restoreMovement) end
+    if State.stopAutoCut then pcall(State.stopAutoCut) end
     if State.stopDupeTest then pcall(State.stopDupeTest) end
     if State.restoreLighting then pcall(State.restoreLighting) end
     for _, c in ipairs(Connections) do pcall(function() c:Disconnect() end) end
@@ -1412,7 +1413,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.4 • Discovery and navigation utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.5 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1576,6 +1577,208 @@ makeButton(toolkit, "HIGHLIGHT 12 NEAREST MATCHES", function()
     notify("Highlighted "..#toolkitHighlights.." trees.")
 end,"card")
 makeButton(toolkit, "CLEAR TREE HIGHLIGHTS", clearToolkitHighlights, "quiet")
+
+
+--========================================================
+-- AUTO WOOD CUTTING V1.5
+-- Manual start/stop; near-field search only; capped server calls.
+-- LT2's tree protocol is not guaranteed to remain compatible.
+--========================================================
+section(toolkit, "AUTO WOOD CUTTING",
+    "Cuts nearby trees with an axe. Manual start/stop, max 3 trees per run.")
+local CutSpecies = makeInput(toolkit, "Tree species filter (empty = any)", "")
+local CutStatus = info(toolkit, "AUTO CUT / IDLE", 112, "text")
+local cuttingActive = false
+local cuttingToken = 0
+local CutStopButton
+local CutStartButton
+
+local axeDamage = {
+    BasicHatchet=0.2, Axe1=0.55, Axe2=0.93, Axe3=1.45,
+    SilverAxe=1.6, ManyAxe=10.2, Rukiryaxe=1.68,
+    FireAxe=0.6, EndTimesAxe=1.58, Beesaxe=1.4,
+    AxeAmber=3.39, AxeChicken=0.9, AxeTwitter=1.65,
+    CandyCornAxe=1.75, AxeAlphaTesters=1.5, AxeBetaTesters=1.45
+}
+local function equippedAxe()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    for _, obj in ipairs(char:GetChildren()) do
+        if obj:IsA("Tool") and obj:FindFirstChild("ToolName") then
+            return obj
+        end
+    end
+end
+local function getAxeForCutting()
+    local tool = equippedAxe()
+    if tool then return tool end
+    local char = LocalPlayer.Character
+    local human = char and char:FindFirstChildOfClass("Humanoid")
+    local bag = LocalPlayer:FindFirstChildOfClass("Backpack")
+    if not human or not bag then return nil end
+    for _, candidate in ipairs(bag:GetChildren()) do
+        if candidate:IsA("Tool") and candidate:FindFirstChild("ToolName")
+            and axeDamage[tostring(candidate.ToolName.Value)] then
+            pcall(function() human:EquipTool(candidate) end)
+            return equippedAxe()
+        end
+    end
+    return nil
+end
+local function localTreeRegions()
+    local roots = {}
+    local folder = Workspace:FindFirstChild("TreeRegions")
+    if folder then
+        for _, obj in ipairs(folder:GetChildren()) do
+            if obj:IsA("Folder") or obj:IsA("Model") then
+                roots[#roots+1] = obj
+            end
+        end
+    end
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        if obj.Name == "TreeRegion" then roots[#roots+1] = obj end
+    end
+    return roots
+end
+local function getCutSection(tree)
+    local trunk = tree:FindFirstChild("WoodSection")
+    if trunk and trunk:IsA("BasePart") then return trunk end
+    for _, part in ipairs(tree:GetChildren()) do
+        if part:IsA("BasePart") and part:FindFirstChild("ID")
+            and tonumber(part.ID.Value) == 1 then return part end
+    end
+end
+local function nextCutTarget(species, ignored)
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return nil end
+    local best, closest, visited = nil, 18, 0
+    for _, region in ipairs(localTreeRegions()) do
+        for _, tree in ipairs(region:GetChildren()) do
+            visited += 1
+            if visited > 1200 then return best end
+            if tree:IsA("Model") and not ignored[tree]
+                and tree:FindFirstChild("CutEvent") then
+                local class = tree:FindFirstChild("TreeClass")
+                local name = class and tostring(class.Value) or tree.Name
+                if species == "" or string.find(string.lower(name), species, 1, true) then
+                    local part = getCutSection(tree)
+                    if part then
+                        local dist = (part.Position - root.Position).Magnitude
+                        if dist < closest then
+                            best = {tree=tree,section=part,species=name}
+                            closest = dist
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return best
+end
+local function stopCutting(reason)
+    cuttingActive = false
+    cuttingToken += 1
+    CutStatus.Text = "AUTO CUT / " .. (reason or "STOPPED")
+    if CutStartButton then CutStartButton.Text = "START AUTO CUT / NEARBY TREES" end
+end
+State.stopAutoCut = function() stopCutting("CLOSED") end
+CutStartButton = makeButton(toolkit, "START AUTO CUT / NEARBY TREES", function()
+    if cuttingActive then notify("Auto cut is already running."); return end
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local interaction = ReplicatedStorage:FindFirstChild("Interaction")
+    local proxy = interaction and interaction:FindFirstChild("RemoteProxy")
+    if not proxy or not proxy:IsA("RemoteEvent") then
+        notify("LT2 cutting remote not available."); return
+    end
+    local tool = getAxeForCutting()
+    local toolName = tool and tool:FindFirstChild("ToolName")
+    if not toolName or not axeDamage[tostring(toolName.Value)] then
+        notify("Equip a supported axe before starting."); return
+    end
+    local species = string.lower(CutSpecies.Text:match("^%s*(.-)%s*$"))
+    local candidate = nextCutTarget(species, {})
+    if not candidate then
+        notify("No matching tree within 18 studs."); return
+    end
+    cuttingToken += 1
+    local token = cuttingToken
+    cuttingActive = true
+    CutStartButton.Text = "AUTO CUT / RUNNING"
+    CutStatus.Text = "AUTO CUT / STARTING..."
+    task.spawn(function()
+        local completed, attempts, skipped = 0, 0, {}
+        for index=1,3 do
+            if not cuttingActive or token ~= cuttingToken or State.closed then break end
+            local target = nextCutTarget(species, skipped)
+            if not target then break end
+            skipped[target.tree] = true
+            local obj, part = target.tree, target.section
+            local cutEvent = obj:FindFirstChild("CutEvent")
+            local idValue = part:FindFirstChild("ID")
+            if not cutEvent or not idValue then
+                CutStatus.Text = "SKIPPED / MISSING CUT DATA"
+            else
+                local succeeded = false
+                local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if not root then break end
+                local startPosition = root.Position
+                local nearbyLogs = Workspace:FindFirstChild("LogModels")
+                local countBefore = nearbyLogs and #nearbyLogs:GetChildren() or 0
+                for attempt=1,24 do
+                    if not cuttingActive or token ~= cuttingToken or State.closed then break end
+                    local currentRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    local activeAxe = equippedAxe()
+                    local nameValue = activeAxe and activeAxe:FindFirstChild("ToolName")
+                    local damage = nameValue and axeDamage[tostring(nameValue.Value)]
+                    if not currentRoot or not damage or not obj.Parent or not part.Parent
+                        or (currentRoot.Position - part.Position).Magnitude > 18
+                        or (currentRoot.Position - startPosition).Magnitude > 30 then
+                        CutStatus.Text = "AUTO CUT / STOPPED: RANGE OR AXE CHANGED"
+                        cuttingActive = false
+                        break
+                    end
+                    local args = {
+                        tool=activeAxe,
+                        faceVector=Vector3.new(0, 0, -1),
+                        height=0.3,
+                        sectionId=idValue.Value,
+                        hitPoints=damage,
+                        cooldown=0.22,
+                        cuttingClass="Axe"
+                    }
+                    local ok = pcall(function() proxy:FireServer(cutEvent, args) end)
+                    if not ok then
+                        CutStatus.Text = "AUTO CUT / REMOTE CALL FAILED"
+                        cuttingActive = false
+                        break
+                    end
+                    attempts += 1
+                    CutStatus.Text = "AUTO CUT / " .. target.species ..
+                        "\nTREE " .. index .. "/3  •  HIT " .. attempt .. "/24"
+                    task.wait(0.28)
+                    if not obj.Parent or not obj:FindFirstChild("CutEvent") then
+                        succeeded = true
+                        break
+                    end
+                    if nearbyLogs and #nearbyLogs:GetChildren() > countBefore then
+                        succeeded = true
+                        break
+                    end
+                end
+                if succeeded then completed += 1 end
+            end
+            if cuttingActive and token == cuttingToken then task.wait(0.7) end
+        end
+        if token == cuttingToken then
+            stopCutting("FINISHED / " .. completed .. " TREES DETECTED\n"
+                .. attempts .. " CUT REQUESTS; SERVER RESULTS MAY VARY")
+        end
+    end)
+end, "cta")
+CutStopButton = makeButton(toolkit, "STOP AUTO CUT NOW", function()
+    if cuttingActive then stopCutting("STOPPED BY USER")
+    else notify("Auto cut is not active.") end
+end, "quiet")
 
 section(toolkit, "AXE & EQUIPMENT MANAGER", "Inventory names and best-axe suggestion from known legacy tiers.")
 local AxeResult=info(toolkit,"AXES  /  NOT SCANNED",125,"text")
@@ -1910,4 +2113,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v1.4 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v1.5 ready. Historical waypoints are unverified.")
