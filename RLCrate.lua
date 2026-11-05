@@ -407,6 +407,25 @@ local BorderPulseTween = TweenService:Create(
 )
 BorderPulseTween:Play()
 
+-- Polished edge sweep on the existing border (no extra rendering loop).
+VisualFX.BorderSweep = Instance.new("UIGradient")
+VisualFX.BorderSweep.Color = ColorSequence.new(Theme.Accent2, Theme.Border)
+VisualFX.BorderSweep.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.70),
+    NumberSequenceKeypoint.new(0.42, 0.18),
+    NumberSequenceKeypoint.new(0.53, 0),
+    NumberSequenceKeypoint.new(0.64, 0.18),
+    NumberSequenceKeypoint.new(1, 0.70)
+})
+VisualFX.BorderSweep.Offset = Vector2.new(-1, 0)
+VisualFX.BorderSweep.Parent = MainStroke
+VisualFX.BorderSweepTween = TweenService:Create(
+    VisualFX.BorderSweep,
+    TweenInfo.new(9.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+    {Offset = Vector2.new(1, 0)}
+)
+VisualFX.BorderSweepTween:Play()
+
 VisualFX.AuraPulse = TweenService:Create(
     VisualFX.MainAura,
     TweenInfo.new(5.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
@@ -462,6 +481,28 @@ VisualFX.EmblemStroke = Stroke(VisualFX.Emblem, Theme.Accent2, 1.6)
 VisualFX.EmblemStroke.Transparency = 0.15
 VisualFX.EmblemGradient = Gradient(VisualFX.Emblem, Theme.Accent, Theme.Panel2, 45)
 VisualFX.EmblemGradient.Offset = Vector2.new(-1, 0)
+VisualFX.Emblem.Active = true
+VisualFX.Emblem.ClipsDescendants = true
+VisualFX.EmblemScale = Instance.new("UIScale")
+VisualFX.EmblemScale.Scale = 1
+VisualFX.EmblemScale.Parent = VisualFX.Emblem
+
+VisualFX.LogoShine = Instance.new("Frame")
+VisualFX.LogoShine.Name = "LogoInteractionShine"
+VisualFX.LogoShine.Size = UDim2.fromScale(1, 1)
+VisualFX.LogoShine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+VisualFX.LogoShine.BackgroundTransparency = 0.91
+VisualFX.LogoShine.BorderSizePixel = 0
+VisualFX.LogoShine.ZIndex = 2
+VisualFX.LogoShine.Parent = VisualFX.Emblem
+VisualFX.LogoShineGradient = Instance.new("UIGradient")
+VisualFX.LogoShineGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(0.5, 0.15),
+    NumberSequenceKeypoint.new(1, 1)
+})
+VisualFX.LogoShineGradient.Offset = Vector2.new(-1, 0)
+VisualFX.LogoShineGradient.Parent = VisualFX.LogoShine
 
 local Decoration = Instance.new("TextLabel")
 Decoration.Name = "MysticsMonogram"
@@ -487,6 +528,23 @@ TweenService:Create(VisualFX.EmblemGradient,
     TweenInfo.new(6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1),
     {Offset = Vector2.new(1, 0)}
 ):Play()
+
+VisualFX.Emblem.MouseEnter:Connect(function()
+    TweenService:Create(VisualFX.EmblemScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.10}):Play()
+    TweenService:Create(VisualFX.EmblemStroke, TweenInfo.new(0.2), {Thickness = 2.2, Transparency = 0}):Play()
+end)
+VisualFX.Emblem.MouseLeave:Connect(function()
+    TweenService:Create(VisualFX.EmblemScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+    TweenService:Create(VisualFX.EmblemStroke, TweenInfo.new(0.22), {Thickness = 1.6, Transparency = 0.15}):Play()
+end)
+VisualFX.Emblem.InputBegan:Connect(function(input)
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+    VisualFX.LogoShineGradient.Offset = Vector2.new(-1, 0)
+    TweenService:Create(VisualFX.LogoShineGradient,
+        TweenInfo.new(0.7, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+        {Offset = Vector2.new(1, 0)}
+    ):Play()
+end)
 
 local MinButton = Instance.new("TextButton")
 MinButton.Size = UDim2.fromOffset(28, 28)
@@ -598,6 +656,35 @@ VisualFX.ContentSheenGradient.Transparency = NumberSequence.new({
     NumberSequenceKeypoint.new(1, 1)
 })
 VisualFX.ContentSheenGradient.Parent = VisualFX.ContentSheen
+
+-- Subtle signature in spare space, behind the scrolling pages.
+VisualFX.Watermark = Instance.new("TextLabel")
+VisualFX.Watermark.Name = "MysticsContentWatermark"
+VisualFX.Watermark.AnchorPoint = Vector2.new(0.5, 0.5)
+VisualFX.Watermark.Position = UDim2.fromScale(0.5, 0.82)
+VisualFX.Watermark.Size = UDim2.new(1, -24, 0, 98)
+VisualFX.Watermark.BackgroundTransparency = 1
+VisualFX.Watermark.Text = "M"
+VisualFX.Watermark.Font = Enum.Font.GothamBlack
+VisualFX.Watermark.TextSize = 86
+VisualFX.Watermark.TextColor3 = Theme.Accent2
+VisualFX.Watermark.TextTransparency = 0.94
+VisualFX.Watermark.ZIndex = 2
+VisualFX.Watermark.Parent = VisualFX.ContentShell
+
+VisualFX.WatermarkCaption = Instance.new("TextLabel")
+VisualFX.WatermarkCaption.Name = "MysticsSignatureCaption"
+VisualFX.WatermarkCaption.AnchorPoint = Vector2.new(0.5, 1)
+VisualFX.WatermarkCaption.Position = UDim2.new(0.5, 0, 1, -18)
+VisualFX.WatermarkCaption.Size = UDim2.new(1, -30, 0, 16)
+VisualFX.WatermarkCaption.BackgroundTransparency = 1
+VisualFX.WatermarkCaption.Text = "M Y S T I C S    /    PREMIUM SUITE"
+VisualFX.WatermarkCaption.Font = Enum.Font.GothamBold
+VisualFX.WatermarkCaption.TextSize = 9
+VisualFX.WatermarkCaption.TextColor3 = Theme.Accent2
+VisualFX.WatermarkCaption.TextTransparency = 0.70
+VisualFX.WatermarkCaption.ZIndex = 2
+VisualFX.WatermarkCaption.Parent = VisualFX.ContentShell
 
 VisualFX.ContentSweep = Instance.new("Frame")
 VisualFX.ContentSweep.Name = "ContentAccentSweep"
@@ -766,6 +853,24 @@ local function Label(text, height, color)
     Corner(l, 10)
     local labelStroke = Stroke(l, Theme.Border, 1)
     labelStroke.Transparency = 0.35
+    -- Hairline reflection creates subtle elevation without dark overlays.
+    local reflection = Instance.new("Frame")
+    reflection.Name = "GlassCardReflection"
+    reflection.Position = UDim2.fromOffset(11, 2)
+    reflection.Size = UDim2.new(1, -22, 0, 1)
+    reflection.BackgroundColor3 = Color3.fromRGB(251, 253, 255)
+    reflection.BackgroundTransparency = 0.73
+    reflection.BorderSizePixel = 0
+    reflection.ZIndex = 11
+    reflection.Parent = l
+    local reflectionFade = Instance.new("UIGradient")
+    reflectionFade.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.78),
+        NumberSequenceKeypoint.new(0.45, 0.05),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    reflectionFade.Parent = reflection
+
     local padding = Instance.new("UIPadding")
     padding.PaddingLeft = UDim.new(0, 11)
     padding.PaddingRight = UDim.new(0, 9)
@@ -782,7 +887,18 @@ local function Section(text)
     holder.BorderSizePixel = 0
     holder.ZIndex = 10
     holder.Parent = Content
-    Corner(holder, 10)
+    Corner(holder, 12)
+    local headerOutline = Stroke(holder, Theme.Border, 1)
+    headerOutline.Transparency = 0.62
+    local softRule = Instance.new("Frame")
+    softRule.Name = "SectionUpperReflection"
+    softRule.Position = UDim2.fromOffset(13, 2)
+    softRule.Size = UDim2.new(1, -26, 0, 1)
+    softRule.BackgroundColor3 = Color3.fromRGB(250, 253, 255)
+    softRule.BackgroundTransparency = 0.78
+    softRule.BorderSizePixel = 0
+    softRule.ZIndex = 11
+    softRule.Parent = holder
 
     local accent = Instance.new("Frame")
     accent.Name = "AccentBar"
@@ -815,7 +931,7 @@ local function Section(text)
     caption.Position = UDim2.fromOffset(14, 17)
     caption.Size = UDim2.new(1, -17, 0, 10)
     caption.Font = Enum.Font.GothamMedium
-    caption.Text = "MYSTICS  /  LIVE SYSTEM"
+    caption.Text = "MYSTICS  /  PREMIUM CONTROLS"
     caption.TextColor3 = Theme.Muted
     caption.TextSize = 10
     caption.ZIndex = 11
@@ -866,14 +982,25 @@ local function MakeButton(text, callback, color)
     local scale = Instance.new("UIScale")
     scale.Scale = 1
     scale.Parent = b
+    local buttonReflection = Instance.new("Frame")
+    buttonReflection.Name = "ActionTopReflection"
+    buttonReflection.Position = UDim2.fromOffset(13, 2)
+    buttonReflection.Size = UDim2.new(1, -26, 0, 1)
+    buttonReflection.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    buttonReflection.BackgroundTransparency = 0.80
+    buttonReflection.BorderSizePixel = 0
+    buttonReflection.ZIndex = 11
+    buttonReflection.Parent = b
 
     b.MouseEnter:Connect(function()
-        TweenService:Create(scale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.012}):Play()
-        TweenService:Create(buttonStroke, TweenInfo.new(0.14), {Transparency = 0.04}):Play()
+        TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Scale = 1.009}):Play()
+        TweenService:Create(buttonStroke, TweenInfo.new(0.18), {Transparency = 0.02, Thickness = 1.45}):Play()
+        TweenService:Create(buttonReflection, TweenInfo.new(0.18), {BackgroundTransparency = 0.32}):Play()
     end)
     b.MouseLeave:Connect(function()
-        TweenService:Create(scale, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
-        TweenService:Create(buttonStroke, TweenInfo.new(0.16), {Transparency = 0.34}):Play()
+        TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        TweenService:Create(buttonStroke, TweenInfo.new(0.18), {Transparency = 0.22, Thickness = 1}):Play()
+        TweenService:Create(buttonReflection, TweenInfo.new(0.18), {BackgroundTransparency = 0.80}):Play()
     end)
     b.MouseButton1Down:Connect(function()
         TweenService:Create(scale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.985}):Play()
@@ -2624,6 +2751,9 @@ local function ApplyTheme()
     end
     -- ApplyTheme's shared stroke pass runs above; restore the emblem accent last.
     VisualFX.EmblemStroke.Color = Theme.Accent2
+    VisualFX.BorderSweep.Color = ColorSequence.new(Theme.Accent2, Theme.Border)
+    VisualFX.Watermark.TextColor3 = Theme.Accent2
+    VisualFX.WatermarkCaption.TextColor3 = Theme.Accent2
     VisualFX.MainAuraGradient.Color = ColorSequence.new(Theme.Accent2, Theme.Background)
     VisualFX.HeaderRuleGradient.Color = ColorSequence.new(Theme.Accent2, Theme.Border)
     VisualFX.TabShellGradient.Color = ColorSequence.new(VisualFX.GlassTop, VisualFX.GlassBottom)
