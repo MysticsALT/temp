@@ -176,6 +176,7 @@ local VisualFX = {}
 local Gui = Instance.new("ScreenGui")
 Gui.Name = "RL_Crate_Unboxing_V1_5_Luxury"
 Gui.ResetOnSpawn = false
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.DisplayOrder = 999999
 
 local Parent = Player:WaitForChild("PlayerGui")
@@ -261,11 +262,14 @@ Main.Parent = Gui
 
 Corner(Main, 24)
 local MainStroke = Stroke(Main, Theme.Border, 1.6)
-local MainGradient = Gradient(Main, Theme.Background:Lerp(Theme.Panel, 0.40), Theme.Background)
-VisualFX.GlassTop = Color3.fromRGB(65, 72, 91)
-VisualFX.GlassBottom = Color3.fromRGB(40, 46, 61)
-VisualFX.CardTop = Color3.fromRGB(72, 79, 99)
-VisualFX.CardBottom = Color3.fromRGB(50, 57, 74)
+local MainGradient = Gradient(Main, Theme.Panel:Lerp(Color3.fromRGB(62, 72, 91), 0.58), Theme.Background:Lerp(Color3.fromRGB(52, 60, 80), 0.72))
+-- High-visibility slate glass: real contrast, not additional dark overlays.
+VisualFX.GlassTop = Color3.fromRGB(104, 118, 141)
+VisualFX.GlassBottom = Color3.fromRGB(79, 91, 112)
+VisualFX.CardTop = Color3.fromRGB(115, 128, 148)
+VisualFX.CardBottom = Color3.fromRGB(94, 108, 131)
+VisualFX.LabelBackground = Color3.fromRGB(104, 116, 137)
+VisualFX.SecondaryBackground = Color3.fromRGB(105, 117, 139)
 
 VisualFX.MainAura = Instance.new("Frame")
 VisualFX.MainAura.Name = "MysticsMainAura"
@@ -527,8 +531,8 @@ VisualFX.TabShell = Instance.new("Frame")
 VisualFX.TabShell.Name = "TabNavigationShell"
 VisualFX.TabShell.Position = TabBar.Position
 VisualFX.TabShell.Size = TabBar.Size
-VisualFX.TabShell.BackgroundColor3 = Color3.fromRGB(48, 54, 70)
-VisualFX.TabShell.BackgroundTransparency = 0.02
+VisualFX.TabShell.BackgroundColor3 = Color3.fromRGB(88, 100, 121)
+VisualFX.TabShell.BackgroundTransparency = 0
 VisualFX.TabShell.BorderSizePixel = 0
 VisualFX.TabShell.ZIndex = 2
 VisualFX.TabShell.Parent = Main
@@ -555,15 +559,15 @@ PageContainer.Position = UDim2.fromOffset(12, 145)
 PageContainer.Size = UDim2.new(1, -24, 1, -157)
 PageContainer.BackgroundTransparency = 1
 PageContainer.ClipsDescendants = true
-PageContainer.ZIndex = 3
+PageContainer.ZIndex = 8
 PageContainer.Parent = Main
 
 VisualFX.ContentShell = Instance.new("Frame")
 VisualFX.ContentShell.Name = "ContentGlassShell"
 VisualFX.ContentShell.Position = UDim2.fromOffset(12, 145)
 VisualFX.ContentShell.Size = UDim2.new(1, -24, 1, -157)
-VisualFX.ContentShell.BackgroundColor3 = Color3.fromRGB(43, 49, 64)
-VisualFX.ContentShell.BackgroundTransparency = 0.02
+VisualFX.ContentShell.BackgroundColor3 = Color3.fromRGB(82, 94, 115)
+VisualFX.ContentShell.BackgroundTransparency = 0
 VisualFX.ContentShell.BorderSizePixel = 0
 VisualFX.ContentShell.ZIndex = 1
 VisualFX.ContentShell.Parent = Main
@@ -631,6 +635,7 @@ local function CreatePage(name)
     page.Name = name .. "Page"
     page.Size = UDim2.fromScale(1, 1)
     page.BackgroundTransparency = 1
+    page.ZIndex = 9
     page.BorderSizePixel = 0
     page.ScrollBarThickness = 3
     page.ScrollBarImageColor3 = Theme.Accent
@@ -739,14 +744,16 @@ SelectPage("OVERVIEW")
 local function Label(text, height, color)
     local l = Instance.new("TextLabel")
     l.Size = UDim2.new(1, 0, 0, height or 27)
-    l.BackgroundColor3 = Color3.fromRGB(58, 65, 82)
-    l.BackgroundTransparency = 0.03
+    l.BackgroundColor3 = VisualFX.LabelBackground
+    l.BackgroundTransparency = 0
+    l.ZIndex = 10
     l:SetAttribute("MysticsGlassLabel", true)
     l.BorderSizePixel = 0
     l.Text = text
     l.TextColor3 = color or Theme.Text
     l.Font = Enum.Font.GothamMedium
-    l.TextSize = 12
+    l.TextSize = 13
+    l.TextTransparency = 0
     l.TextXAlignment = Enum.TextXAlignment.Left
     l.TextYAlignment = Enum.TextYAlignment.Center
     l.TextTruncate = Enum.TextTruncate.AtEnd
@@ -758,7 +765,7 @@ local function Label(text, height, color)
     l.Parent = Content
     Corner(l, 10)
     local labelStroke = Stroke(l, Theme.Border, 1)
-    labelStroke.Transparency = 0.55
+    labelStroke.Transparency = 0.35
     local padding = Instance.new("UIPadding")
     padding.PaddingLeft = UDim.new(0, 11)
     padding.PaddingRight = UDim.new(0, 9)
@@ -769,9 +776,13 @@ end
 local function Section(text)
     local holder = Instance.new("Frame")
     holder.Name = "SectionHeading"
-    holder.Size = UDim2.new(1, 0, 0, 33)
-    holder.BackgroundTransparency = 1
+    holder.Size = UDim2.new(1, 0, 0, 36)
+    holder.BackgroundColor3 = Color3.fromRGB(73, 83, 103)
+    holder.BackgroundTransparency = 0.02
+    holder.BorderSizePixel = 0
+    holder.ZIndex = 10
     holder.Parent = Content
+    Corner(holder, 10)
 
     local accent = Instance.new("Frame")
     accent.Name = "AccentBar"
@@ -779,6 +790,7 @@ local function Section(text)
     accent.Position = UDim2.fromOffset(1, 6)
     accent.BackgroundColor3 = Theme.Accent2
     accent.BorderSizePixel = 0
+    accent.ZIndex = 11
     accent.Parent = holder
     Corner(accent, 2)
 
@@ -790,7 +802,9 @@ local function Section(text)
     l.Text = string.upper(text)
     l.TextColor3 = Theme.Accent2
     l.Font = Enum.Font.GothamBold
-    l.TextSize = 11
+    l.TextSize = 12
+    l.TextTransparency = 0
+    l.ZIndex = 11
     l.TextXAlignment = Enum.TextXAlignment.Left
     l.Parent = holder
     l:SetAttribute("MysticsTextRole", "accent")
@@ -803,7 +817,8 @@ local function Section(text)
     caption.Font = Enum.Font.GothamMedium
     caption.Text = "MYSTICS  /  LIVE SYSTEM"
     caption.TextColor3 = Theme.Muted
-    caption.TextSize = 9
+    caption.TextSize = 10
+    caption.ZIndex = 11
     caption.TextXAlignment = Enum.TextXAlignment.Left
     caption.Parent = holder
     caption:SetAttribute("MysticsTextRole", "muted")
@@ -823,12 +838,15 @@ end
 local function MakeButton(text, callback, color)
     local b = Instance.new("TextButton")
     b.Size = UDim2.new(1, 0, 0, 44)
-    b.BackgroundColor3 = color and Color3.fromRGB(59, 66, 84) or Theme.Accent
+    b.BackgroundColor3 = color and VisualFX.SecondaryBackground or Theme.Panel2
+    b.BackgroundTransparency = 0
     b.BorderSizePixel = 0
+    b.ZIndex = 10
     b.Text = text
-    b.TextColor3 = Color3.fromRGB(253, 252, 255)
+    b.TextColor3 = Color3.fromRGB(255, 255, 255)
+    b.TextTransparency = 0
     b.Font = Enum.Font.GothamBold
-    b.TextSize = 12
+    b.TextSize = 13
     b.TextXAlignment = Enum.TextXAlignment.Left
     b.AutoButtonColor = false
     b.Parent = Content
@@ -837,7 +855,7 @@ local function MakeButton(text, callback, color)
 
     Corner(b, 12)
     local buttonStroke = Stroke(b, Theme.Border, 1)
-    buttonStroke.Transparency = 0.34
+    buttonStroke.Transparency = 0.22
     local accentRail = Instance.new("Frame")
     accentRail.Name = "ButtonAccentRail"
     accentRail.Size = UDim2.new(0, 3, 1, -14)
@@ -881,11 +899,12 @@ end
 local function MakeInput(placeholder, default)
     local box = Instance.new("TextBox")
     box.Size = UDim2.new(1, 0, 0, 38)
-    box.BackgroundColor3 = Theme.Panel2
-    box.BackgroundTransparency = 0.04
+    box.BackgroundColor3 = VisualFX.LabelBackground
+    box.BackgroundTransparency = 0
     box.BorderSizePixel = 0
-    box.TextColor3 = Theme.Text
-    box.PlaceholderColor3 = Theme.Muted
+    box.ZIndex = 10
+    box.TextColor3 = Color3.fromRGB(255, 255, 255)
+    box.PlaceholderColor3 = Color3.fromRGB(233, 238, 246)
     box.PlaceholderText = placeholder
     box.Text = tostring(default)
     box.ClearTextOnFocus = false
@@ -1103,8 +1122,8 @@ Section("SESSION ANALYTICS")
 local StatsDashboard = Instance.new("Frame")
 StatsDashboard.Name = "LiveStatisticsDashboard"
 StatsDashboard.Size = UDim2.new(1, 0, 0, 148)
-StatsDashboard.BackgroundColor3 = Color3.fromRGB(40, 46, 62)
-StatsDashboard.BackgroundTransparency = 0.04
+StatsDashboard.BackgroundColor3 = Color3.fromRGB(85, 97, 119)
+StatsDashboard.BackgroundTransparency = 0
 StatsDashboard.BorderSizePixel = 0
 StatsDashboard.Parent = Content
 Corner(StatsDashboard, 11)
@@ -1121,13 +1140,13 @@ local function DashboardCard(order, caption, initial, accentColor)
     local card = Instance.new("Frame")
     card.Name = caption:gsub("%W", "") .. "Card"
     card.LayoutOrder = order
-    card.BackgroundColor3 = Color3.fromRGB(57, 63, 81)
-    card.BackgroundTransparency = 0.02
+    card.BackgroundColor3 = Color3.fromRGB(97, 110, 131)
+    card.BackgroundTransparency = 0
     card.BorderSizePixel = 0
     card.Parent = StatsDashboard
     Corner(card, 10)
     local cardStroke = Stroke(card, Theme.Border, 1)
-    cardStroke.Transparency = 0.34
+    cardStroke.Transparency = 0.20
     local cardGradient = Gradient(card, VisualFX.CardTop, VisualFX.CardBottom, 90)
     cardGradient.Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 0.04),
@@ -1145,8 +1164,8 @@ local function DashboardCard(order, caption, initial, accentColor)
     title.Position = UDim2.fromOffset(15, 4)
     title.Size = UDim2.new(1, -20, 0, 13)
     title.Font = Enum.Font.GothamBold
-    title.TextSize = 9
-    title.TextColor3 = Theme.Muted
+    title.TextSize = 10
+    title.TextColor3 = Color3.fromRGB(245, 247, 255)
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Text = caption
     title.Parent = card
