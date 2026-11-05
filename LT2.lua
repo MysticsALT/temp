@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.16 | Self-contained utility module + opt-in legacy research tests
+-- V2.17 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.16  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.17  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -376,7 +376,7 @@ local function info(page, text, height, role)
         UDim2.fromOffset(13, 4), 11, role or "muted", false)
     return l
 end
-local TAB_NAMES = {"TRAVEL", "WOOD", "PLOTS", "PLAYERS", "TOOLS", "UTILS", "DUPES", "STYLE"}
+local TAB_NAMES = {"TRAVEL", "WOOD", "RARE TREES", "PLOTS", "PLAYERS", "TOOLS", "UTILS", "DUPES", "STYLE"}
 for index, name in ipairs(TAB_NAMES) do
     createPage(name)
     local tab = makeButton(TabBar, name, function()
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.16",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.17",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -480,6 +480,7 @@ local function cleanup()
     clearHighlights()
     if State.clearToolkitHighlights then pcall(State.clearToolkitHighlights) end
     if State.restoreMovement then pcall(State.restoreMovement) end
+    if State.clearRareHighlights then pcall(State.clearRareHighlights) end
     if State.stopSell then pcall(State.stopSell) end
     if State.stopHarvest then pcall(State.stopHarvest) end
     if State.stopAutoCut then pcall(State.stopAutoCut) end
@@ -1703,6 +1704,105 @@ local function showTreeScan()
 end
 local ScanTreesButton = makeButton(toolkit, "SCAN TREES NEAR ME", showTreeScan, "cta")
 ScanTreesButton.LayoutOrder = -197
+--========================================================
+-- RARE TREE RADAR: Spook, Sinister and seasonal Christmas trees.
+-- Uses replicated TreeClass / WoodSection / Owner values only.
+--========================================================
+local RarePage = pages["RARE TREES"]
+section(RarePage, "RARE TREE RADAR", "Find Spook, Sinister and Christmas event trees in loaded tree regions.")
+local RareStatus = info(RarePage, "RARE RADAR / READY\nScan loaded regions to find rare seasonal trees.", 104, "text")
+local RareHighlights = {}
+local rareCandidates = {}
+local function clearRareHighlights()
+    for _, highlight in ipairs(RareHighlights) do
+        pcall(function() highlight:Destroy() end)
+    end
+    table.clear(RareHighlights)
+end
+local function rareClass(tree)
+    local value = tree:FindFirstChild("TreeClass")
+    if not value or not value:IsA("ValueBase") then return nil end
+    return tostring(value.Value)
+end
+local function classifyRareTree(className)
+    local key = string.lower(tostring(className or "")):gsub("[%s_%-]", "")
+    if key == "spooky" then return "SPOOK" end
+    if key == "spookyneon" or key == "sinister" then return "SINISTER" end
+    if key == "bluespruce" or key == "christmas" or key == "christmastree"
+        or key == "christmasevent" then return "CHRISTMAS" end
+    return nil
+end
+local function scanRareTrees()
+    clearRareHighlights()
+    table.clear(rareCandidates)
+    local regions = localTreeRegions()
+    if #regions == 0 then
+        RareStatus.Text = "RARE RADAR / NO TREE REGIONS FOUND\nWait for the world to load, then scan again."
+        return
+    end
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not root then RareStatus.Text = "RARE RADAR / CHARACTER NOT READY"; return end
+    local inspected, matched = 0, 0
+    for _, region in ipairs(regions) do
+        for _, tree in ipairs(region:GetChildren()) do
+            inspected += 1
+            if inspected > 20000 then break end
+            if tree:IsA("Model") then
+                local className = rareClass(tree)
+                local rareType = classifyRareTree(className)
+                local wood = tree:FindFirstChild("WoodSection", true)
+                local owner = tree:FindFirstChild("Owner")
+                if rareType and wood and wood:IsA("BasePart") then
+                    matched += 1
+                    local distance = (wood.Position - root.Position).Magnitude
+                    local ownerName = "UNKNOWN"
+                    if owner and owner:IsA("ValueBase") then
+                        ownerName = owner.Value == nil and "UNOWNED" or tostring(owner.Value)
+                    end
+                    rareCandidates[#rareCandidates+1] = {
+                        obj=tree, part=wood, class=className, kind=rareType,
+                        distance=math.floor(distance), owner=ownerName
+                    }
+                end
+            end
+        end
+        if inspected > 20000 then break end
+    end
+    table.sort(rareCandidates,function(a,b) return a.distance < b.distance end)
+    local counts = {SPOOK=0,SINISTER=0,CHRISTMAS=0}
+    local rows = {}
+    for _, item in ipairs(rareCandidates) do counts[item.kind] += 1 end
+    for i=1,math.min(12,#rareCandidates) do
+        local item=rareCandidates[i]
+        rows[#rows+1]=string.format("%s  /  %s  /  %d studs  /  %s",
+            item.kind,item.class,item.distance,item.owner)
+    end
+    if #rows==0 then rows[1]="No matching rare trees in currently loaded regions." end
+    RareStatus.Text = string.format(
+        "RARE TREES FOUND: %d  |  SCANNED: %d\nSPOOK: %d  •  SINISTER: %d  •  CHRISTMAS: %d\n%s",
+        matched,inspected,counts.SPOOK,counts.SINISTER,counts.CHRISTMAS,table.concat(rows,"\n"))
+end
+local RareScanButton = makeButton(RarePage,"SCAN RARE TREES",scanRareTrees,"cta")
+local RareHighlightButton = makeButton(RarePage,"HIGHLIGHT ALL FOUND RARE TREES",function()
+    clearRareHighlights()
+    for _, item in ipairs(rareCandidates) do
+        if item.obj and item.obj.Parent then
+            local h=Instance.new("Highlight")
+            h.Name="MysticsRareTreeHighlight"
+            h.Adornee=item.obj
+            h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+            h.FillTransparency=0.88
+            h.OutlineColor=item.kind=="SPOOK" and Color3.fromRGB(160,160,175)
+                or item.kind=="SINISTER" and Color3.fromRGB(255,35,55)
+                or Color3.fromRGB(75,190,255)
+            h.Parent=Workspace
+            RareHighlights[#RareHighlights+1]=h
+        end
+    end
+    RareStatus.Text = RareStatus.Text .. "\nHIGHLIGHTED: " .. #RareHighlights
+end,"card")
+local RareClearButton = makeButton(RarePage,"CLEAR RARE TREE HIGHLIGHTS",clearRareHighlights,"quiet")
+
 local HighlightTreesButton = makeButton(toolkit, "HIGHLIGHT 12 NEAREST MATCHES", function()
     clearToolkitHighlights()
     for i=1, math.min(#treeCandidates,12) do
@@ -2550,6 +2650,7 @@ end, "cta")
 section(StylePage,"SAVE SETTINGS & WAYPOINTS","Optional executor file API; session-only fallback.")
 makeButton(StylePage,"SAVE MY PREFERENCES",storeSettings,"cta")
 makeButton(StylePage,"LOAD SAVED PREFERENCES",loadSettings,"card")
+State.clearRareHighlights=clearRareHighlights
 State.clearToolkitHighlights=clearToolkitHighlights
 
 -- Window entrance: soft scale-up and fade, with a moving accent sweep.
