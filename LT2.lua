@@ -778,26 +778,41 @@ local playerLayout = Instance.new("UIListLayout")
 playerLayout.SortOrder = Enum.SortOrder.LayoutOrder
 playerLayout.Padding = UDim.new(0, 8)
 playerLayout.Parent = PlayerRows
+-- Cache one button per player. Filtering only toggles visibility, avoiding
+-- repeated connections and object churn on every search keystroke.
+local rosterButtons = {}
 local function renderPlayers()
-    for _, child in ipairs(PlayerRows:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
     local filter = string.lower(PlayerSearch.Text)
     local players = Players:GetPlayers()
+    local present = {}
     table.sort(players, function(a,b) return a.Name < b.Name end)
     local row = 0
-    for _, p in ipairs(players) do
-        if string.find(string.lower(p.Name .. " " .. p.DisplayName), filter, 1, true) then
-            row += 1
-            local chosen = p
-            local label = p.DisplayName == p.Name and p.Name
-                or (p.DisplayName .. "  (@" .. p.Name .. ")")
-            if p == LocalPlayer then label = label .. "  •  YOU" end
-            local button = makeButton(PlayerRows, label, function()
+    for _, player in ipairs(players) do
+        present[player] = true
+        local item = rosterButtons[player]
+        if not item then
+            local chosen = player
+            local label = player.DisplayName == player.Name and player.Name
+                or (player.DisplayName .. "  (@" .. player.Name .. ")")
+            if player == LocalPlayer then label = label .. "  •  YOU" end
+            item = makeButton(PlayerRows, label, function()
                 State.selectedPlayer = chosen
                 SelectedLabel.Text = "SELECTED PLAYER  /  " .. chosen.Name
             end, "card", 42)
-            button.LayoutOrder = row
+            rosterButtons[player] = item
+        end
+        local visible = string.find(string.lower(player.Name .. " " .. player.DisplayName),
+            filter, 1, true) ~= nil
+        item.Visible = visible
+        if visible then
+            row += 1
+            item.LayoutOrder = row
+        end
+    end
+    for player, button in pairs(rosterButtons) do
+        if not present[player] then
+            if button.Parent then button:Destroy() end
+            rosterButtons[player] = nil
         end
     end
     PlayerRows.Size = UDim2.new(1, 0, 0, row * 50)
@@ -874,17 +889,20 @@ for _, key in ipairs({"BLOOD", "OBSIDIAN", "CHRISTMAS", "HALLOWEEN"}) do
     end, "card", 42)
     themeButtons[key] = button
 end
-local AlertsToggle = makeButton(StylePage, "JOIN / LEAVE NOTICES  /  ON", function()
+local AlertsToggle
+AlertsToggle = makeButton(StylePage, "JOIN / LEAVE NOTICES  /  ON", function()
     State.notifications = not State.notifications
     AlertsToggle.Text = State.notifications
         and "JOIN / LEAVE NOTICES  /  ON" or "JOIN / LEAVE NOTICES  /  OFF"
 end, "card")
-local AudioToggle = makeButton(StylePage, "BUTTON SOUNDS  /  ON", function()
+local AudioToggle
+AudioToggle = makeButton(StylePage, "BUTTON SOUNDS  /  ON", function()
     State.sounds = not State.sounds
     AudioToggle.Text = State.sounds and "BUTTON SOUNDS  /  ON"
         or "BUTTON SOUNDS  /  OFF"
 end, "card")
-local MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
+local MotionToggle
+MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
     State.lowMotion = not State.lowMotion
     MotionToggle.Text = State.lowMotion and "LOW MOTION  /  ON"
         or "LOW MOTION  /  OFF"
