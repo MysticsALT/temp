@@ -1,7 +1,7 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V1.1 | Self-contained, opt-in utility interface
--- No remote script execution, anti-ban tampering or save exploits.
+-- V1.2 | Self-contained utility module + opt-in legacy research tests
+-- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical BLOOD coordinates are only reference data, NOT verified.
 --========================================================
 
@@ -15,6 +15,7 @@ local UserInputService = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
 local Debris = game:GetService("Debris")
 local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 if not LocalPlayer then return end
 
@@ -256,7 +257,7 @@ Header.Active = true
 stroke(Header)
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V1.1  •  RELIABLE WOOD INSPECTOR",
+makeLabel(Header, "V1.2  •  LT2 TOOLKIT + LEGACY TESTS",
     UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
@@ -347,7 +348,7 @@ local function info(page, text, height, role)
         UDim2.fromOffset(13, 4), 11, role or "muted", false)
     return l
 end
-local TAB_NAMES = {"TRAVEL", "WOOD", "PLOTS", "PLAYERS", "UTILS", "STYLE"}
+local TAB_NAMES = {"TRAVEL", "WOOD", "PLOTS", "PLAYERS", "UTILS", "DUPES", "STYLE"}
 for index, name in ipairs(TAB_NAMES) do
     createPage(name)
     local tab = makeButton(TabBar, name, function()
@@ -363,8 +364,8 @@ for index, name in ipairs(TAB_NAMES) do
     end, "quiet", 32)
     tab.Name = name .. "Tab"
     tab.LayoutOrder = index
-    tab.Size = UDim2.fromOffset(76, 32)
-    tab.TextSize = 10
+    tab.Size = UDim2.fromOffset(64, 32)
+    tab.TextSize = 9
     tab.TextXAlignment = Enum.TextXAlignment.Center
     tabs[name] = tab
 end
@@ -418,6 +419,8 @@ local function cleanup()
     if State.closed then return end
     State.closed = true
     clearHighlights()
+    if State.stopDupeTest then pcall(State.stopDupeTest) end
+    if State.restoreLighting then pcall(State.restoreLighting) end
     for _, c in ipairs(Connections) do pcall(function() c:Disconnect() end) end
     if State.ferryConnection then pcall(function() State.ferryConnection:Disconnect() end) end
     for _, t in ipairs(Tweens) do pcall(function() t:Cancel() end) end
@@ -1081,6 +1084,109 @@ local UtilityState = info(Utils,
     "PLAYER LIST  /  EVENT DRIVEN\nWOOD / PLOT  /  MANUAL REFRESH\nLOADER  /  PINNED GITHUB RELEASE", 90)
 UtilityState.TextYAlignment = Enum.TextYAlignment.Center
 
+-- Useful ideas extracted from recent public hubs: axe inventory,
+-- money/slot visibility, and reversible client-only lighting controls.
+-- These work independently of the legacy dupe experiments.
+section(Utils, "BACKPACK & SAVE READOUT",
+    "Display local tool counts and currently replicated status.")
+local InventoryInfo = info(Utils, "BACKPACK  /  NOT SCANNED", 84, "text")
+local BalanceInfo = info(Utils, "MONEY  /  NOT SCANNED", 82, "text")
+local function moneyObject()
+    local folder = LocalPlayer:FindFirstChild("leaderstats")
+    local money = folder and folder:FindFirstChild("Money")
+    return money and money:IsA("ValueBase") and money or nil
+end
+local function getMoney()
+    local obj = moneyObject()
+    return obj and tonumber(obj.Value) or nil
+end
+local function updateInventory()
+    local bag = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local character = LocalPlayer.Character
+    local equipped, backpack = 0, 0
+    local kinds = {}
+    local function scan(root, isEquipped)
+        if not root then return end
+        for _, child in ipairs(root:GetChildren()) do
+            if child:IsA("Tool") then
+                if isEquipped then equipped += 1 else backpack += 1 end
+                local item = child:FindFirstChild("ItemName")
+                kinds[#kinds + 1] = item and item:IsA("ValueBase") and
+                    tostring(item.Value) or child.Name
+            end
+        end
+    end
+    scan(bag, false)
+    scan(character, true)
+    InventoryInfo.Text = string.format(
+        "TOOLS IN BACKPACK: %d  •  EQUIPPED: %d\n%s",
+        backpack, equipped,
+        #kinds > 0 and table.concat({unpack(kinds, 1, math.min(4, #kinds))}, "  /  ")
+            or "No tools visible"
+    )
+    local slot = LocalPlayer:FindFirstChild("CurrentSaveSlot")
+    local saving = LocalPlayer:FindFirstChild("CurrentlySavingOrLoading")
+    local cash = getMoney()
+    BalanceInfo.Text = string.format("MONEY: %s\nSAVE SLOT: %s  •  BUSY: %s",
+        cash and tostring(cash) or "Unavailable",
+        slot and tostring(slot.Value) or "Unavailable",
+        saving and tostring(saving.Value) or "Unknown"
+    )
+end
+makeButton(Utils, "REFRESH MY TOOLS & MONEY", updateInventory, "cta")
+section(Utils, "PERSONAL VISIBILITY", "Local-only lighting changes; restore at any time.")
+local defaultLighting = {
+    FogStart=Lighting.FogStart,
+    FogEnd=Lighting.FogEnd,
+    Brightness=Lighting.Brightness,
+    ClockTime=Lighting.ClockTime,
+    GlobalShadows=Lighting.GlobalShadows
+}
+State.forceDay = false
+State.noFog = false
+local function applyLighting()
+    if State.forceDay then
+        Lighting.Brightness = 3.2
+        Lighting.ClockTime = 14
+        Lighting.GlobalShadows = false
+    else
+        Lighting.Brightness = defaultLighting.Brightness
+        Lighting.ClockTime = defaultLighting.ClockTime
+        Lighting.GlobalShadows = defaultLighting.GlobalShadows
+    end
+    if State.noFog then
+        Lighting.FogStart = 100000
+        Lighting.FogEnd = 100000
+    else
+        Lighting.FogStart = defaultLighting.FogStart
+        Lighting.FogEnd = defaultLighting.FogEnd
+    end
+end
+State.restoreLighting = function()
+    State.forceDay = false
+    State.noFog = false
+    pcall(applyLighting)
+end
+local DayToggle
+DayToggle = makeButton(Utils, "FULLBRIGHT DAY: OFF", function()
+    State.forceDay = not State.forceDay
+    applyLighting()
+    DayToggle.Text = "FULLBRIGHT DAY: " .. (State.forceDay and "ON" or "OFF")
+end, "card")
+local FogToggle
+FogToggle = makeButton(Utils, "REMOVE FOG: OFF", function()
+    State.noFog = not State.noFog
+    applyLighting()
+    FogToggle.Text = "REMOVE FOG: " .. (State.noFog and "ON" or "OFF")
+end, "card")
+makeButton(Utils, "RESTORE ORIGINAL LIGHTING", function()
+    State.restoreLighting()
+    DayToggle.Text = "FULLBRIGHT DAY: OFF"
+    FogToggle.Text = "REMOVE FOG: OFF"
+    notify("Original local lighting restored.")
+end, "quiet")
+updateInventory()
+
 local StylePage = pages.STYLE
 section(StylePage, "SIGNATURE THEME", "Choose the look of the LT2 module.")
 local themeButtons = {}
@@ -1127,8 +1233,8 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.1 • Updated local wood detection.")
-info(StylePage, "The older BLOOD hub was used only as a feature reference. This module contains no auto-blacklist, money dupe, save-slot edits, base wipe, or third-party HTTP code.", 106)
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.2 • Rebuilt tools and gated legacy tests.")
+info(StylePage, "BLOOD and public script hubs were reviewed as references. Legacy dupe experiments are opt-in only, not verified, and may harm your in-game save or money. No auto-blacklisting, base wiping or third-party HTTP code.", 130)
 
 applyTheme()
 for key, b in pairs(themeButtons) do
