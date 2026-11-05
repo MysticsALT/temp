@@ -816,25 +816,25 @@ end
 VisualFX.TabSlider = Instance.new("Frame")
 VisualFX.TabSlider.Name = "SharedSlidingTabIndicator"
 VisualFX.TabSlider.Size = UDim2.fromOffset(45, 3)
-VisualFX.TabSlider.Position = UDim2.fromOffset(22, 32)
+VisualFX.TabSlider.Position = UDim2.fromOffset(36, 133)
 VisualFX.TabSlider.BackgroundColor3 = Theme.Accent2
 VisualFX.TabSlider.BorderSizePixel = 0
 VisualFX.TabSlider.ZIndex = 5
-VisualFX.TabSlider.Parent = VisualFX.TabShell
+VisualFX.TabSlider.Parent = Main
 Corner(VisualFX.TabSlider, 3)
 VisualFX.TabSliderStroke = Stroke(VisualFX.TabSlider, Theme.Accent2, 1)
 VisualFX.TabSliderStroke.Transparency = 0.32
 
 VisualFX.SlideToTab = function(name)
     local button = TabButtons[name]
-    if not button or not button.Parent or not VisualFX.TabShell.Parent then return end
-    local offset = button.AbsolutePosition.X - VisualFX.TabShell.AbsolutePosition.X
+    if not button or not button.Parent or not VisualFX.TabSlider.Parent then return end
+    local offset = button.AbsolutePosition.X - Main.AbsolutePosition.X
         + (button.AbsoluteSize.X - 45) / 2
     if offset < 0 then return end
     TweenService:Create(
         VisualFX.TabSlider,
         TweenInfo.new(0.27, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-        {Position = UDim2.fromOffset(math.floor(offset + 0.5), 32)}
+        {Position = UDim2.fromOffset(math.floor(offset + 0.5), 133)}
     ):Play()
 end
 task.defer(function()
