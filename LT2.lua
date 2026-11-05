@@ -1187,6 +1187,110 @@ makeButton(Utils, "RESTORE ORIGINAL LIGHTING", function()
 end, "quiet")
 updateInventory()
 
+-- LEGACY DUPE LAB / Experimental and reversible where possible.
+-- Unverified in the current game. Run only with disposable saves/money.
+local Dupes = pages.DUPES
+section(Dupes, "LEGACY DUPE LAB", "Old methods; NOT verified in 2026.")
+info(Dupes, "Item mode changes the local CurrentSaveSlot to -1. Money mode sends a limited self-donation. Both can be patched and can cause lost progress or money. Neither runs automatically.", 129)
+local SaveReport = info(Dupes, "SAVE STATUS  /  NOT CHECKED", 75, "text")
+local function dupeSaveValues()
+    return LocalPlayer:FindFirstChild("CurrentSaveSlot"),
+        LocalPlayer:FindFirstChild("CurrentlySavingOrLoading")
+end
+local function dupeSaving()
+    local slot, busy = dupeSaveValues()
+    return not slot or not slot:IsA("ValueBase") or
+        (busy and busy:IsA("ValueBase") and busy.Value == true)
+end
+local function updateDupeReadout()
+    local slot, busy = dupeSaveValues()
+    SaveReport.Text = "SLOT: " .. (slot and tostring(slot.Value) or "MISSING") ..
+        "\nSAVING/LOADING: " .. (busy and tostring(busy.Value) or "UNKNOWN") ..
+        "\nNO SERVER-SIDE SAVE ASSURANCE"
+end
+makeButton(Dupes, "REFRESH SLOT / MONEY STATUS", function()
+    updateDupeReadout()
+    updateInventory()
+end, "quiet")
+section(Dupes, "ITEM DUPLICATION TEST", "A bounded 10-second legacy slot experiment.")
+info(Dupes, "WARNING: Old slot suppression may prevent saving or do nothing. Do not run on a save you cannot afford to lose.", 82)
+local ItemRiskInput = makeInput(Dupes, "Type RISK to unlock", "")
+local ItemResult = info(Dupes, "ITEM TEST  /  IDLE", 58, "text")
+local ItemButton
+local ItemArmedExpiry = 0
+local ItemActive = false
+local OriginalSlot = nil
+local SlotObject = nil
+local ItemSerial = 0
+local function stopItemTest()
+    ItemActive = false
+    ItemSerial += 1
+    if SlotObject and SlotObject.Parent and OriginalSlot ~= nil
+        and SlotObject.Value == -1 then
+        pcall(function() SlotObject.Value = OriginalSlot end)
+    end
+    SlotObject, OriginalSlot = nil, nil
+    ItemArmedExpiry = 0
+    if ItemButton and ItemButton.Parent then
+        ItemButton.Text = "BEGIN LEGACY ITEM DUPE TEST"
+    end
+    if ItemResult and ItemResult.Parent then
+        ItemResult.Text = "ITEM TEST  /  STOPPED. Check save and inventory."
+    end
+end
+State.stopDupeTest = stopItemTest
+ItemButton = makeButton(Dupes, "BEGIN LEGACY ITEM DUPE TEST", function()
+    if ItemActive then
+        stopItemTest()
+        notify("Item test stopped and local slot restored where possible.")
+        return
+    end
+    if string.upper(ItemRiskInput.Text:match("^%s*(.-)%s*$")) ~= "RISK" then
+        notify("Type RISK to acknowledge that progress can be lost.")
+        return
+    end
+    if not gameLooksLikeLT2() then notify("LT2 structures not detected."); return end
+    local slot = LocalPlayer:FindFirstChild("CurrentSaveSlot")
+    if dupeSaving() or not slot or type(slot.Value) ~= "number" or slot.Value < 0 then
+        notify("Load a save and wait until save/load is idle.")
+        updateDupeReadout()
+        return
+    end
+    if os.clock() > ItemArmedExpiry then
+        ItemArmedExpiry = os.clock() + 12
+        ItemButton.Text = "CONFIRM 10-SECOND ITEM TEST"
+        ItemResult.Text = "ARMED  /  Click again within 12s; progress at risk."
+        return
+    end
+    SlotObject, OriginalSlot = slot, slot.Value
+    ItemArmedExpiry = 0
+    ItemActive = true
+    ItemSerial += 1
+    local serial = ItemSerial
+    ItemButton.Text = "STOP & RESTORE SLOT"
+    ItemResult.Text = "RUNNING  /  Local save slot temporarily set to -1"
+    task.spawn(function()
+        for i = 1, 20 do
+            if State.closed or not ItemActive or serial ~= ItemSerial then break end
+            local _, saving = dupeSaveValues()
+            if not slot.Parent or
+                (slot.Value ~= -1 and slot.Value ~= OriginalSlot) or
+                (saving and saving:IsA("ValueBase") and saving.Value == true) then
+                break
+            end
+            local ok = pcall(function() slot.Value = -1 end)
+            if not ok then break end
+            task.wait(0.5)
+        end
+        if not State.closed and serial == ItemSerial then
+            stopItemTest()
+            updateDupeReadout()
+            notify("Item experiment complete. No dupe confirmed; inspect saved items.")
+        end
+    end)
+end, "cta", 52)
+info(Dupes, "The old method is local-only and cannot guarantee server persistence. Auto-stops after 10 seconds and attempts to restore the original slot value.", 92)
+
 local StylePage = pages.STYLE
 section(StylePage, "SIGNATURE THEME", "Choose the look of the LT2 module.")
 local themeButtons = {}
