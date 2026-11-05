@@ -1498,7 +1498,6 @@ local function loadSettings()
         return HttpService:JSONDecode(readfile(toolkitSettingsFile))
     end)
     if not ok or type(data) ~= "table" then notify("No valid saved preferences."); return end
-    if data.theme == "BLOOD" then data.theme = "MYSTICS" end
     if type(data.theme) == "string" and Palette[data.theme] then State.theme=data.theme end
     for _, key in ipairs({"notifications","sounds","lowMotion"}) do
         if type(data[key]) == "boolean" then State[key]=data[key] end
@@ -1786,9 +1785,9 @@ makeButton(Travel, "REFRESH CURRENT COORDINATES", function()
     end
     local p = currentCoordinates
     CompassReadout.Text = string.format("X %.1f  /  Y %.1f  /  Z %.1f", p.X, p.Y, p.Z)
-        .. (nearestName and ("\\nNEAREST SAVED: " .. nearestName
+        .. (nearestName and ("\nNEAREST SAVED: " .. nearestName
             .. " / " .. math.floor(nearestDistance) .. " studs") or
-            "\\nNo personal waypoints saved.")
+            "\nNo personal waypoints saved.")
 end, "cta")
 makeButton(Travel, "COPY CURRENT COORDINATES", function()
     if not currentCoordinates then notify("Refresh current coordinates first."); return end
@@ -1854,7 +1853,7 @@ makeButton(toolkit, "COUNT VISIBLE WOOD TYPES", function()
     end
     WoodCensus.Text = "VISIBLE WOOD MODELS: " .. total
         .. (scanned > 1800 and " / SCAN CAPPED" or "")
-        .. "\\n" .. listText(rows, 6)
+        .. "\n" .. listText(rows, 6)
 end, "cta")
 
 section(toolkit, "OWNED OBJECT OVERVIEW",
@@ -1882,9 +1881,9 @@ makeButton(toolkit, "SUMMARIZE MY OBJECTS", function()
     end
     OwnedOverview.Text = "OWNED MATCHES: " .. #results
         .. (#results >= 350 and " / CAPPED" or "") ..
-        "\\nWOOD " .. counts.Wood .. "  /  VEHICLES " .. counts.Vehicle
-        .. "\\nMACHINES " .. counts.Machine .. "  /  BUILD " .. counts.Building
-        .. "\\nOTHER " .. counts.Other
+        "\nWOOD " .. counts.Wood .. "  /  VEHICLES " .. counts.Vehicle
+        .. "\nMACHINES " .. counts.Machine .. "  /  BUILD " .. counts.Building
+        .. "\nOTHER " .. counts.Other
 end, "card")
 
 section(buildPage, "LOADOUT NOTES", "Keep a short personal note for your next build or shopping trip.")
