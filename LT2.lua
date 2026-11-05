@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V1.5 | Self-contained utility module + opt-in legacy research tests
+-- V1.6 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -1413,7 +1413,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.5 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.6 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1528,68 +1528,106 @@ local function loadSettings()
     notify("Preferences loaded.")
 end
 
-section(toolkit, "TREE FINDER", "Find replicated trees; no harvesting or server edits.")
+section(toolkit, "TREE FINDER", "Nearby tree scan with species filter and highlighting.")
 local TreeSearch = makeInput(toolkit, "Tree name filter (e.g. Oak, Birch)", "")
 local TreeResult = info(toolkit, "TREE FINDER  /  READY", 116, "text")
 local treeCandidates = {}
--- TreeRegions is sometimes a container, but LT2 also uses multiple
--- Workspace.TreeRegion instances. Inspect both layouts without deep scans.
-local function scanTreeRegions()
+-- Shared tree discovery used by finder and auto cutter.
+-- LT2 normally creates multiple Workspace.TreeRegion models, while
+-- some versions wrap them inside Workspace.TreeRegions.
+local function localTreeRegions()
     local roots = {}
     local plural = Workspace:FindFirstChild("TreeRegions")
     if plural then
-        for _, region in ipairs(plural:GetChildren()) do
-            if region:IsA("Folder") or region:IsA("Model") then
-                roots[#roots+1] = region
+        for _, obj in ipairs(plural:GetChildren()) do
+            if obj:IsA("Folder") or obj:IsA("Model") then
+                roots[#roots+1] = obj
             end
         end
     end
-    for _, region in ipairs(Workspace:GetChildren()) do
-        if region.Name == "TreeRegion" then
-            roots[#roots+1] = region
-        end
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        if obj.Name == "TreeRegion" then roots[#roots+1] = obj end
     end
     return roots
 end
-makeButton(toolkit, "SCAN TREES NEAR ME", function()
+local function getCutSection(tree)
+    local trunk = tree:FindFirstChild("WoodSection")
+    if trunk and trunk:IsA("BasePart") then return trunk end
+    for _, part in ipairs(tree:GetChildren()) do
+        local id = part:IsA("BasePart") and part:FindFirstChild("ID")
+        if id and id:IsA("ValueBase") and tonumber(id.Value) == 1 then return part end
+    end
+    return objectPosition(tree) and (tree.PrimaryPart or tree:FindFirstChildWhichIsA("BasePart")) or nil
+end
+-- Use the same region/section discovery as AUTO WOOD CUTTING.
+local function showTreeScan()
     clearToolkitHighlights()
     treeCandidates = {}
-    local regions = scanTreeRegions()
+    local regions = localTreeRegions()
     if #regions == 0 then
-        TreeResult.Text = "No tree regions found in Workspace.\nConfirm LT2 is fully loaded, then scan again."
+        TreeResult.Text = "NO TREE REGIONS FOUND\nWorld may still be loading; try scanning again."
         return
     end
-    local query = string.lower(TreeSearch.Text)
-    local seen = 0
+    local query = string.lower(TreeSearch.Text:match("^%s*(.-)%s*$"))
+    local inspected, qualified, matching, nearby = 0, 0, 0, 0
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not root then TreeResult.Text = "Character not ready. Spawn before scanning."; return end
+    local center = root.Position
     for _, region in ipairs(regions) do
         for _, tree in ipairs(region:GetChildren()) do
-            seen += 1
-            if seen > 1800 or #treeCandidates >= 100 then break end
-            if tree:IsA("Model") then
+            inspected += 1
+            if inspected > 3200 then break end
+            if tree:IsA("Model") and tree:FindFirstChild("CutEvent") then
+                qualified += 1
                 local class = tree:FindFirstChild("TreeClass")
                 local species = class and class:IsA("ValueBase")
-                    and tostring(class.Value) or shortName(tree)
-                local section = tree:FindFirstChild("WoodSection")
-                local pos = section and section:IsA("BasePart") and section.Position
-                    or objectPosition(tree)
-                if pos and (query == "" or string.find(string.lower(species),query,1,true)) then
-                    treeCandidates[#treeCandidates+1] = {
-                        obj=tree, name=species, pos=pos, dist=safeDistance(pos) or 999999
-                    }
+                    and tostring(class.Value) or tree.Name
+                if query == "" or string.find(string.lower(species), query, 1, true) then
+                    matching += 1
+                    local part = getCutSection(tree)
+                    if part then
+                        local distance = (part.Position - center).Magnitude
+                        -- Show the closest 100 results rather than the first 100
+                        -- encountered in the workspace hierarchy.
+                        if distance <= 1800 then
+                            nearby += 1
+                            local candidate = {obj=tree, name=species, pos=part.Position,
+                                dist=math.floor(distance)}
+                            if #treeCandidates < 100 then
+                                treeCandidates[#treeCandidates+1] = candidate
+                            else
+                                local farthest = 1
+                                for i=2,#treeCandidates do
+                                    if treeCandidates[i].dist > treeCandidates[farthest].dist then
+                                        farthest = i
+                                    end
+                                end
+                                if candidate.dist < treeCandidates[farthest].dist then
+                                    treeCandidates[farthest] = candidate
+                                end
+                            end
+                        end
+                    end
                 end
             end
         end
-        if seen > 1800 or #treeCandidates >= 100 then break end
+        if inspected > 3200 then break end
     end
     table.sort(treeCandidates, function(a,b) return a.dist < b.dist end)
-    local names = {}
+    local rows = {}
     for i=1, math.min(4,#treeCandidates) do
-        local t=treeCandidates[i]
-        names[#names+1]=t.name.." / "..t.dist.." studs"
+        local t = treeCandidates[i]
+        rows[#rows+1] = t.name .. " / " .. t.dist .. " studs"
     end
-    TreeResult.Text = "MATCHES: "..#treeCandidates.." / REGIONS: "..#regions
-        ..(seen > 1800 and " / SCAN CAPPED" or "").."\n"..listText(names,4)
-end, "cta")
+    local summary = "NEARBY: "..nearby.." | TYPES MATCH: "..matching
+        .."\nTREES: "..qualified.." | REGIONS: "..#regions
+        ..(inspected > 3200 and " / SCAN CAPPED" or "")
+    if #treeCandidates == 0 then
+        summary ..= "\nNo trees within 1800 studs; try a blank species filter."
+    end
+    TreeResult.Text = summary .. "\n" .. listText(rows, 4)
+end
+makeButton(toolkit, "SCAN TREES NEAR ME", showTreeScan, "cta")
 makeButton(toolkit, "HIGHLIGHT 12 NEAREST MATCHES", function()
     clearToolkitHighlights()
     for i=1, math.min(#treeCandidates,12) do
@@ -1611,7 +1649,7 @@ makeButton(toolkit, "CLEAR TREE HIGHLIGHTS", clearToolkitHighlights, "quiet")
 
 
 --========================================================
--- AUTO WOOD CUTTING V1.5
+-- AUTO WOOD CUTTING V1.6
 -- Manual start/stop; near-field search only; capped server calls.
 -- LT2's tree protocol is not guaranteed to remain compatible.
 --========================================================
@@ -1655,29 +1693,6 @@ local function getAxeForCutting()
         end
     end
     return nil
-end
-local function localTreeRegions()
-    local roots = {}
-    local folder = Workspace:FindFirstChild("TreeRegions")
-    if folder then
-        for _, obj in ipairs(folder:GetChildren()) do
-            if obj:IsA("Folder") or obj:IsA("Model") then
-                roots[#roots+1] = obj
-            end
-        end
-    end
-    for _, obj in ipairs(Workspace:GetChildren()) do
-        if obj.Name == "TreeRegion" then roots[#roots+1] = obj end
-    end
-    return roots
-end
-local function getCutSection(tree)
-    local trunk = tree:FindFirstChild("WoodSection")
-    if trunk and trunk:IsA("BasePart") then return trunk end
-    for _, part in ipairs(tree:GetChildren()) do
-        if part:IsA("BasePart") and part:FindFirstChild("ID")
-            and tonumber(part.ID.Value) == 1 then return part end
-    end
 end
 local function nextCutTarget(species, ignored)
     local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -2144,4 +2159,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v1.5 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v1.6 ready. Historical waypoints are unverified.")
