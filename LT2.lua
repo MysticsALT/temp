@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.9 | Self-contained utility module + opt-in legacy research tests
+-- V2.10 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -257,7 +257,7 @@ Header.Active = true
 stroke(Header)
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V2.9  •  LT2 TOOLKIT + LEGACY TESTS",
+makeLabel(Header, "V2.10  •  LT2 TOOLKIT + LEGACY TESTS",
     UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
@@ -1415,7 +1415,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.9 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.10 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1604,7 +1604,7 @@ local function showTreeScan()
                         local distance = (part.Position - center).Magnitude
                         -- Show the closest 100 results rather than the first 100
                         -- encountered in the workspace hierarchy.
-                        if distance <= 1800 then
+                        if distance <= 10000 then
                             nearby += 1
                             local candidate = {obj=tree, name=species, pos=part.Position,
                                 dist=math.floor(distance)}
@@ -1638,7 +1638,7 @@ local function showTreeScan()
         .."\nTREES: "..qualified.." | REGIONS: "..#regions
         ..(inspected > 3200 and " / SCAN CAPPED" or "")
     if #treeCandidates == 0 then
-        summary ..= "\nNo trees within 1800 studs; try a blank species filter."
+        summary ..= "\nNo trees within 10000 studs; try a blank species filter."
     end
     TreeResult.Text = summary .. "\n" .. listText(rows, 4)
 end
@@ -2593,4 +2593,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.9 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v2.10 ready. Historical waypoints are unverified.")
