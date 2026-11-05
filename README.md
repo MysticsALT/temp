@@ -1,6 +1,6 @@
 # Mystics Hub
 
-The current Lumber Tycoon 2 module is **Mystics LT2 v2.16** (compact Blood Red animated UI). The launcher is the entry point and loads that exact module from an immutable GitHub commit when you select **Lumber Tycoon 2**.
+The current Lumber Tycoon 2 module is **Mystics LT2 v2.17** (compact Blood Red animated UI). The launcher is the entry point and loads that exact module from an immutable GitHub commit when you select **Lumber Tycoon 2**.
 
 ## Run Mystics
 
@@ -21,6 +21,6 @@ Then select **Lumber Tycoon 2** in the Mystics Hub. The launcher downloads and r
 
 ## Version / loading notes
 
-- The launcher pins the LT2 module to commit `29e8220416cb619df8f43d2c09d08e520e31a71e`.
-- The launcher checks for the `V2.16 | Self-contained` module marker before executing.
+- The launcher pins the LT2 module to commit `043e76eaf3b9ee0a2960f4661c544591f6a23b02`.
+- The launcher checks for the `V2.17 | Self-contained` module marker before executing.
 - To update the LT2 experience, update `LT2.lua`, then update the pinned commit and version marker in `Mystics_Launcher.lua`.
