@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V1.0 | Self-contained, opt-in utility interface
+-- V1.1 | Self-contained, opt-in utility interface
 -- No remote script execution, anti-ban tampering or save exploits.
 -- Historical BLOOD coordinates are only reference data, NOT verified.
 --========================================================
@@ -256,7 +256,7 @@ Header.Active = true
 stroke(Header)
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V1.0  •  CLEAN UTILITY SUITE",
+makeLabel(Header, "V1.1  •  RELIABLE WOOD INSPECTOR",
     UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
@@ -419,6 +419,7 @@ local function cleanup()
     State.closed = true
     clearHighlights()
     for _, c in ipairs(Connections) do pcall(function() c:Disconnect() end) end
+    if State.ferryConnection then pcall(function() State.ferryConnection:Disconnect() end) end
     for _, t in ipairs(Tweens) do pcall(function() t:Cancel() end) end
     if Gui.Parent then Gui:Destroy() end
     if getgenv then
@@ -824,6 +825,34 @@ HighlightButton = makeButton(Wood, "OWNED WOOD OUTLINES: OFF", function()
     end
 end, "card")
 info(Wood, "Outlines are client-side only. If owned logs lose ownership or the game stops replicating a model, they cannot be counted reliably.", 82)
+section(Wood, "WOOD DEBUGGER", "Point at a log or plank to inspect how its ownership is stored.")
+local AimedWoodInfo = info(Wood, "AIMED MODEL  /  NOT INSPECTED", 71)
+makeButton(Wood, "INSPECT WOOD UNDER CURSOR", function()
+    local mouse = LocalPlayer:GetMouse()
+    local target = mouse and mouse.Target
+    if not target then
+        AimedWoodInfo.Text = "No visible part was targeted. Try aiming directly at a log or plank."
+        notify("No model found under your pointer.")
+        return
+    end
+    local candidate = target
+    local validRoot = {LogModels=true, PlayerModels=true, WoodModels=true, PlankModels=true}
+    while candidate and candidate ~= Workspace do
+        if candidate.Parent and validRoot[candidate.Parent.Name] then break end
+        candidate = candidate.Parent
+    end
+    if not candidate or candidate == Workspace then
+        AimedWoodInfo.Text = "Target is not in a recognised wood-model folder: " ..
+            string.sub(target.Name, 1, 35)
+        return
+    end
+    local value, hasOwner = readOwnerValue(candidate)
+    local status = not hasOwner and "NO OWNER FIELD" or
+        (ownerIsLocal(value) and "OWNED BY YOU" or "OTHER/UNASSIGNED")
+    AimedWoodInfo.Text = "MODEL: " .. string.sub(candidate.Name, 1, 35) ..
+        "\nFOLDER: " .. candidate.Parent.Name .. "   /   " .. status
+    notify("Wood target inspected: " .. status)
+end, "quiet")
 -- Plot inspection is deliberately read-only except for optional local TP.
 local Plots = pages.PLOTS
 section(Plots, "PLOT INSPECTOR", "Ownership is checked before any plot destination is offered.")
@@ -961,21 +990,49 @@ local Utils = pages.UTILS
 section(Utils, "WORLD STATUS", "Lightweight live information; no automation loops.")
 local FerryText = info(Utils, "FERRY  /  NOT CONNECTED", 52, "text")
 local WorldText = info(Utils, "WORLD  /  CHECKING", 58)
-local ferryConn
+local FerryAlertsEnabled = false
+local FerryAlertsButton
+local lastFerrySeconds
 local function refreshFerry()
-    if ferryConn then ferryConn:Disconnect(); ferryConn = nil end
+    if State.ferryConnection then
+        State.ferryConnection:Disconnect()
+        State.ferryConnection = nil
+    end
+    lastFerrySeconds = nil
     local ferry = Workspace:FindFirstChild("Ferry")
-    local value = ferry and ferry:FindFirstChild("TimeToDeparture")
+    local value = ferry and (ferry:FindFirstChild("TimeToDeparture")
+        or ferry:FindFirstChild("TimeToDeparture", true))
     if value and value:IsA("ValueBase") then
         local function update()
-            FerryText.Text = "FERRY DEPARTURE  /  " .. tostring(value.Value)
+            if State.closed then return end
+            local seconds = tonumber(value.Value)
+            FerryText.Text = "FERRY DEPARTURE  /  " ..
+                (seconds and (tostring(math.max(0, math.floor(seconds))) .. " SECONDS")
+                    or tostring(value.Value))
+            if FerryAlertsEnabled and seconds and seconds <= 0
+                and lastFerrySeconds and lastFerrySeconds > 0 then
+                notify("Ferry countdown reached zero.")
+            end
+            lastFerrySeconds = seconds
         end
         update()
-        ferryConn = connect(value:GetPropertyChangedSignal("Value"), update)
+        State.ferryConnection = value:GetPropertyChangedSignal("Value"):Connect(update)
     else
         FerryText.Text = "FERRY  /  TIMER UNAVAILABLE"
     end
 end
+FerryAlertsButton = makeButton(Utils, "FERRY DEPARTURE ALERT: OFF", function()
+    FerryAlertsEnabled = not FerryAlertsEnabled
+    FerryAlertsButton.Text = FerryAlertsEnabled
+        and "FERRY DEPARTURE ALERT: ON" or "FERRY DEPARTURE ALERT: OFF"
+    notify("Ferry alert " .. (FerryAlertsEnabled and "enabled." or "disabled."))
+end, "card")
+makeButton(Utils, "TRAVEL TO HISTORICAL FERRY DOCK", function()
+    moveTo(Vector3.new(1114, 3.2, -197), "historical ferry dock", false)
+end, "quiet")
+connect(Workspace.ChildAdded, function(child)
+    if child.Name == "Ferry" then task.defer(refreshFerry) end
+end)
 local function refreshWorld()
     WorldText.Text = gameLooksLikeLT2()
         and "WORLD DETECTED  /  LT2-TYPE STRUCTURES FOUND"
@@ -983,7 +1040,7 @@ local function refreshWorld()
     refreshFerry()
 end
 makeButton(Utils, "REFRESH WORLD STATUS", refreshWorld, "cta")
-info(Utils, "Older scripts assume remotes, shop inventories and map coordinates that may no longer match the live game. No game-remotes are fired here.", 92)
+info(Utils, "The original MG Plays GUI linked three external scripts: JamesGui, EEVNXX GUI, and a ferry script. Their source contents could not be verified, so this module replaces only the verifiable ferry timer and dock navigation without downloading them.", 126)
 section(Utils, "RELIABILITY", "No permanent refresh loops or hidden web dependencies.")
 local UtilityState = info(Utils,
     "PLAYER LIST  /  EVENT DRIVEN\nWOOD / PLOT  /  MANUAL REFRESH\nLOADER  /  PINNED GITHUB RELEASE", 90)
@@ -1035,7 +1092,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.0 • Built from a clean codebase.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.1 • Updated local wood detection.")
 info(StylePage, "The older BLOOD hub was used only as a feature reference. This module contains no auto-blacklist, money dupe, save-slot edits, base wipe, or third-party HTTP code.", 106)
 
 applyTheme()
