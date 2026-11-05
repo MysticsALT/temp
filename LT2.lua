@@ -348,7 +348,7 @@ local function info(page, text, height, role)
         UDim2.fromOffset(13, 4), 11, role or "muted", false)
     return l
 end
-local TAB_NAMES = {"TRAVEL", "WOOD", "PLOTS", "PLAYERS", "UTILS", "DUPES", "STYLE"}
+local TAB_NAMES = {"TRAVEL", "WOOD", "PLOTS", "PLAYERS", "TOOLS", "BUILD", "UTILS", "DUPES", "STYLE"}
 for index, name in ipairs(TAB_NAMES) do
     createPage(name)
     local tab = makeButton(TabBar, name, function()
@@ -364,8 +364,8 @@ for index, name in ipairs(TAB_NAMES) do
     end, "quiet", 32)
     tab.Name = name .. "Tab"
     tab.LayoutOrder = index
-    tab.Size = UDim2.fromOffset(64, 32)
-    tab.TextSize = 9
+    tab.Size = UDim2.fromOffset(50, 32)
+    tab.TextSize = 8
     tab.TextXAlignment = Enum.TextXAlignment.Center
     tabs[name] = tab
 end
@@ -419,6 +419,8 @@ local function cleanup()
     if State.closed then return end
     State.closed = true
     clearHighlights()
+    if State.clearToolkitHighlights then pcall(State.clearToolkitHighlights) end
+    if State.restoreMovement then pcall(State.restoreMovement) end
     if State.stopDupeTest then pcall(State.stopDupeTest) end
     if State.restoreLighting then pcall(State.restoreLighting) end
     for _, c in ipairs(Connections) do pcall(function() c:Disconnect() end) end
@@ -1412,8 +1414,364 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.2 • Rebuilt tools and gated legacy tests.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.3 • Rebuilt tools and gated legacy tests.")
 info(StylePage, "BLOOD and public script hubs were reviewed as references. Legacy dupe experiments are opt-in only, not verified, and may harm your in-game save or money. No auto-blacklisting, base wiping or third-party HTTP code.", 130)
+
+
+--========================================================
+-- EXPANDED TOOLKIT V1.3: read-only discovery + reversible local controls
+-- All discovery is bounded to known LT2 folders and manually refreshed.
+--========================================================
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local toolkit = pages.TOOLS
+local buildPage = pages.BUILD
+local toolkitHighlights = {}
+local toolkitSettingsFile = "MysticsLT2_Settings.json"
+local function clearToolkitHighlights()
+    for _, h in ipairs(toolkitHighlights) do pcall(function() h:Destroy() end) end
+    table.clear(toolkitHighlights)
+end
+local function shortName(obj)
+    local item = obj:FindFirstChild("ItemName")
+    return item and item:IsA("ValueBase") and tostring(item.Value) or obj.Name
+end
+local function ownedModel(obj)
+    return belongsToLocal(obj)
+end
+local function objectPosition(obj)
+    if obj:IsA("BasePart") then return obj.Position end
+    if obj:IsA("Model") then
+        local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+        return part and part.Position or nil
+    end
+    return nil
+end
+local function safeDistance(pos)
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    return root and math.floor((pos - root.Position).Magnitude) or nil
+end
+local function modelRoots()
+    local roots = {}
+    for _, name in ipairs({"PlayerModels","LogModels","PlankModels"}) do
+        local root = Workspace:FindFirstChild(name)
+        if root then roots[#roots+1] = root end
+    end
+    return roots
+end
+local function findModels(predicate, cap)
+    local results, inspected = {}, 0
+    for _, root in ipairs(modelRoots()) do
+        for _, obj in ipairs(root:GetChildren()) do
+            inspected += 1
+            if inspected > 2500 then return results end
+            if (obj:IsA("Model") or obj:IsA("BasePart")) and predicate(obj) then
+                results[#results+1] = obj
+                if #results >= (cap or 120) then return results end
+            end
+        end
+    end
+    return results
+end
+local function listText(items, cap)
+    if #items == 0 then return "None detected in replicated game objects." end
+    local out = {}
+    for i=1, math.min(#items, cap or 7) do out[#out+1] = items[i] end
+    return table.concat(out, "\n") .. (#items > (cap or 7) and "\n...and more" or "")
+end
+local function storeSettings()
+    if type(writefile) ~= "function" then notify("File API unavailable: settings remain session-only."); return end
+    local waypoints = {}
+    for _, p in ipairs(State.customLocations) do
+        waypoints[#waypoints+1] = {name=p.name, x=p.pos.X, y=p.pos.Y, z=p.pos.Z}
+    end
+    local ok, encoded = pcall(HttpService.JSONEncode, HttpService, {
+        version=1, theme=State.theme, notifications=State.notifications,
+        sounds=State.sounds, lowMotion=State.lowMotion, waypoints=waypoints
+    })
+    if ok and pcall(writefile, toolkitSettingsFile, encoded) then
+        notify("Mystics preferences saved.")
+    else notify("Could not save preferences.") end
+end
+local function loadSettings()
+    if type(readfile) ~= "function" then notify("File API unavailable: settings remain session-only."); return end
+    local ok, data = pcall(function()
+        return HttpService:JSONDecode(readfile(toolkitSettingsFile))
+    end)
+    if not ok or type(data) ~= "table" then notify("No valid saved preferences."); return end
+    if type(data.theme) == "string" and Palette[data.theme] then State.theme=data.theme end
+    for _, key in ipairs({"notifications","sounds","lowMotion"}) do
+        if type(data[key]) == "boolean" then State[key]=data[key] end
+    end
+    State.customLocations = {}
+    if type(data.waypoints) == "table" then
+        for _, p in ipairs(data.waypoints) do
+            if #State.customLocations >= 15 then break end
+            if type(p) == "table" and type(p.name) == "string" and #p.name <= 30
+                and type(p.x) == "number" and type(p.y) == "number"
+                and type(p.z) == "number" then
+                local pos = Vector3.new(p.x,p.y,p.z)
+                if pos.Magnitude < 500000 and pos.Magnitude == pos.Magnitude then
+                    State.customLocations[#State.customLocations+1] = {name=p.name,pos=pos}
+                end
+            end
+        end
+    end
+    renderCustom()
+    applyTheme()
+    for key, b in pairs(themeButtons) do
+        b.Text = (key == State.theme and "✓  " or "     ") .. key
+    end
+    AlertsToggle.Text = State.notifications and "JOIN / LEAVE NOTICES  /  ON" or "JOIN / LEAVE NOTICES  /  OFF"
+    AudioToggle.Text = State.sounds and "BUTTON SOUNDS  /  ON" or "BUTTON SOUNDS  /  OFF"
+    MotionToggle.Text = State.lowMotion and "LOW MOTION  /  ON" or "LOW MOTION  /  OFF"
+    notify("Preferences loaded.")
+end
+
+section(toolkit, "TREE FINDER", "Find replicated trees; no harvesting or server edits.")
+local TreeSearch = makeInput(toolkit, "Tree name filter (e.g. Oak, Birch)", "")
+local TreeResult = info(toolkit, "TREE FINDER  /  READY", 116, "text")
+local treeCandidates = {}
+makeButton(toolkit, "SCAN TREES NEAR ME", function()
+    clearToolkitHighlights()
+    treeCandidates = {}
+    local folder = Workspace:FindFirstChild("TreeRegions")
+    if not folder then TreeResult.Text="TreeRegions not replicated; tree scan unavailable."; return end
+    local query = string.lower(TreeSearch.Text)
+    local seen = 0
+    for _, region in ipairs(folder:GetChildren()) do
+        for _, tree in ipairs(region:GetChildren()) do
+            seen += 1
+            if seen > 1800 or #treeCandidates >= 100 then break end
+            local species = shortName(tree)
+            local pos = objectPosition(tree)
+            if pos and (query == "" or string.find(string.lower(species),query,1,true)) then
+                treeCandidates[#treeCandidates+1] = {obj=tree,name=species,pos=pos,dist=safeDistance(pos) or 999999}
+            end
+        end
+        if seen > 1800 or #treeCandidates >= 100 then break end
+    end
+    table.sort(treeCandidates, function(a,b) return a.dist < b.dist end)
+    local names = {}
+    for i=1, math.min(4,#treeCandidates) do
+        local t=treeCandidates[i]
+        names[#names+1]=t.name.." / "..t.dist.." studs"
+    end
+    TreeResult.Text = "MATCHES: "..#treeCandidates.." (scan capped)\n"..listText(names,4)
+end, "cta")
+makeButton(toolkit, "HIGHLIGHT 12 NEAREST MATCHES", function()
+    clearToolkitHighlights()
+    for i=1, math.min(#treeCandidates,12) do
+        local obj=treeCandidates[i].obj
+        if obj and obj.Parent then
+            local h=Instance.new("Highlight")
+            h.Name="MysticsTreeFinder"
+            h.Adornee=obj
+            h.FillTransparency=0.85
+            h.OutlineColor=theme().accent
+            h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+            h.Parent=Workspace
+            toolkitHighlights[#toolkitHighlights+1]=h
+        end
+    end
+    notify("Highlighted "..#toolkitHighlights.." trees.")
+end,"card")
+makeButton(toolkit, "CLEAR TREE HIGHLIGHTS", clearToolkitHighlights, "quiet")
+
+section(toolkit, "AXE & EQUIPMENT MANAGER", "Inventory names and best-axe suggestion from known legacy tiers.")
+local AxeResult=info(toolkit,"AXES  /  NOT SCANNED",125,"text")
+local axeRanks={Axe1=2,Axe2=3,Axe3=4,SilverAxe=5,Rukiryaxe=8,FireAxe=11,Beesaxe=13,ManyAxe=15,EndTimesAxe=16}
+makeButton(toolkit,"SCAN MY AXES",function()
+    local axes={}
+    for _, root in ipairs({LocalPlayer:FindFirstChildOfClass("Backpack"),LocalPlayer.Character}) do
+        if root then
+            for _, obj in ipairs(root:GetChildren()) do
+                if obj:IsA("Tool") then
+                    local name=shortName(obj)
+                    axes[#axes+1]={name=name,rank=axeRanks[name],equipped=root==LocalPlayer.Character}
+                end
+            end
+        end
+    end
+    table.sort(axes,function(a,b) return (a.rank or -1)>(b.rank or -1) end)
+    local rows={}
+    for i=1,math.min(5,#axes) do
+        local a=axes[i]
+        rows[#rows+1]=a.name..(a.equipped and " [EQUIPPED]" or "")..
+            (a.rank and " / historical tier "..a.rank or " / unranked")
+    end
+    AxeResult.Text="TOOLS: "..#axes.." / HISTORICAL TIERS NOT VERIFIED\n"..listText(rows,5)
+end,"cta")
+
+section(toolkit,"ITEM CATALOGUE", "Search known historical identifiers; catalogue is not an item spawner.")
+local CatalogInput=makeInput(toolkit,"Search items or categories","")
+local CatalogResult=info(toolkit,"CATALOGUE  /  ENTER A SEARCH",135,"text")
+local catalogue={
+    {"Axe1","Axes"},{"Axe2","Axes"},{"Axe3","Axes"},{"SilverAxe","Axes"},
+    {"Rukiryaxe","Axes"},{"FireAxe","Axes"},{"ManyAxe","Axes"},
+    {"EndTimesAxe","Axes"},{"Beesaxe","Axes"},{"CandyCaneAxe","Axes"},
+    {"Sawmill","Machinery"},{"Sawmill2","Machinery"},{"Sawmill3","Machinery"},
+    {"Sawmill4","Machinery"},{"UtilityTruck","Vehicles"},{"UtilityTruck2","Vehicles"},
+    {"Trailer","Vehicles"},{"Trailer2","Vehicles"},{"Conveyor","Machinery"},
+    {"StraightConveyor","Machinery"},{"TiltConveyor","Machinery"},
+    {"PropertySoldSign","Building"},{"WoodChecker","Machinery"}
+}
+makeButton(toolkit,"SEARCH ITEM CATALOGUE",function()
+    local query=string.lower(CatalogInput.Text)
+    local matches={}
+    for _,entry in ipairs(catalogue) do
+        if query=="" or string.find(string.lower(entry[1].." "..entry[2]),query,1,true) then
+            matches[#matches+1]=entry[1].." / "..entry[2]
+        end
+    end
+    CatalogResult.Text="KNOWN IDENTIFIERS: "..#matches.."\n"..listText(matches,7)
+end,"card")
+
+section(toolkit,"OWNED VEHICLES", "Locate vehicles in replicated player models.")
+local VehicleResult=info(toolkit,"VEHICLES  /  NOT SCANNED",112,"text")
+local nearestVehicle=nil
+makeButton(toolkit,"FIND MY VEHICLES",function()
+    nearestVehicle=nil
+    local vehicles=findModels(function(obj)
+        local name=string.lower(shortName(obj))
+        return ownedModel(obj) and (name:find("truck",1,true) or name:find("trailer",1,true) or name:find("car",1,true))
+    end,50)
+    local rows={}
+    local nearest=math.huge
+    for _,obj in ipairs(vehicles) do
+        local pos=objectPosition(obj)
+        local dist=pos and safeDistance(pos)
+        rows[#rows+1]=shortName(obj)..(dist and (" / "..dist.." studs") or "")
+        if dist and dist<nearest then nearest=dist;nearestVehicle=pos end
+    end
+    VehicleResult.Text="OWNED VEHICLES: "..#vehicles.."\n"..listText(rows,5)
+end,"cta")
+makeButton(toolkit,"TRAVEL NEAR MY CLOSEST VEHICLE",function()
+    if nearestVehicle then moveTo(nearestVehicle+Vector3.new(5,0,0),"owned vehicle",false)
+    else notify("Scan vehicles first; no valid vehicle location.") end
+end,"quiet")
+
+section(toolkit,"PERFORMANCE", "Manual FPS sampling and replicated ping.")
+local PerformanceResult=info(toolkit,"PERFORMANCE  /  NOT MEASURED",65,"text")
+makeButton(toolkit,"MEASURE FPS & PING (2 SECONDS)",function()
+    local count=0
+    local started=os.clock()
+    local conn
+    conn=RunService.RenderStepped:Connect(function() count+=1 end)
+    task.delay(2,function()
+        conn:Disconnect()
+        if State.closed then return end
+        local fps=math.floor(count/math.max(0.1,os.clock()-started))
+        local ping="Unavailable"
+        pcall(function() ping=game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString() end)
+        PerformanceResult.Text="FPS: "..fps.."\nPING: "..tostring(ping)
+    end)
+end,"card")
+
+section(buildPage,"SAWMILL MANAGER","Owned machines only; manual discovery.")
+local SawmillResult=info(buildPage,"SAWMILLS  /  NOT SCANNED",125,"text")
+makeButton(buildPage,"SCAN MY SAWMILLS",function()
+    local mills=findModels(function(obj)
+        return ownedModel(obj) and string.find(string.lower(shortName(obj)),"sawmill",1,true)~=nil
+    end,70)
+    local rows={}
+    for _,obj in ipairs(mills) do
+        local pos=objectPosition(obj)
+        local dist=pos and safeDistance(pos)
+        rows[#rows+1]=shortName(obj)..(dist and (" / "..dist.." studs") or "")
+    end
+    SawmillResult.Text="OWNED SAWMILLS: "..#mills.."\n"..listText(rows,6)
+end,"cta")
+
+section(buildPage,"BUILD & BLUEPRINT ASSISTANT","Read-only summary of structures on your plot.")
+local BuildResult=info(buildPage,"BUILDINGS  /  NOT SCANNED",115,"text")
+makeButton(buildPage,"INSPECT OWNED STRUCTURES",function()
+    local owned=findModels(function(obj) return ownedModel(obj) end,250)
+    local counts={}
+    for _,obj in ipairs(owned) do
+        local name=shortName(obj)
+        if string.find(string.lower(name),"blueprint",1,true)
+            or string.find(string.lower(name),"wall",1,true)
+            or string.find(string.lower(name),"floor",1,true) then
+            counts[name]=(counts[name] or 0)+1
+        end
+    end
+    local rows={}
+    for name,count in pairs(counts) do rows[#rows+1]=name.." x"..count end
+    table.sort(rows)
+    BuildResult.Text="BLUEPRINT / STRUCTURE TYPES: "..#rows.."\n"..listText(rows,6)
+end,"card")
+
+section(buildPage,"WOOD VALUE ESTIMATOR","Local planning calculator, not a verified market price.")
+local VolumeInput=makeInput(buildPage,"Wood volume in game units","100")
+local PriceInput=makeInput(buildPage,"Estimated price per volume unit","1")
+local ValueResult=info(buildPage,"ESTIMATE  /  ENTER VALUES",58,"text")
+makeButton(buildPage,"CALCULATE ESTIMATED WOOD VALUE",function()
+    local v,p=tonumber(VolumeInput.Text),tonumber(PriceInput.Text)
+    if not v or not p or v<0 or p<0 or v>1e9 or p>1e9 then
+        ValueResult.Text="Enter non-negative volume and price values.";return
+    end
+    ValueResult.Text=string.format("ESTIMATED VALUE: %.2f (%.2f x %.2f)",v*p,v,p)
+end,"cta")
+
+section(buildPage,"SHOP & PURCHASE PLANNER","Browse shop stock; no automatic purchases or remote calls.")
+local ShopResult=info(buildPage,"SHOPS  /  NOT SCANNED",125,"text")
+makeButton(buildPage,"INSPECT REPLICATED SHOP STOCK",function()
+    local shops=Workspace:FindFirstChild("Stores")
+    if not shops then ShopResult.Text="Workspace.Stores unavailable.";return end
+    local rows={}
+    for _,shop in ipairs(shops:GetChildren()) do
+        local count=0
+        for _,child in ipairs(shop:GetDescendants()) do
+            if child:IsA("Model") and child:FindFirstChild("ItemName") then count+=1 end
+            if count>=100 then break end
+        end
+        rows[#rows+1]=shop.Name.." / up to "..count.." visible items"
+    end
+    ShopResult.Text="SHOPS: "..#rows.."\n"..listText(rows,6)
+end,"card")
+
+section(buildPage,"LOCAL MOVEMENT CONTROLS","Reversible client-side values; server may override.")
+local SpeedInput=makeInput(buildPage,"WalkSpeed (8-32)","16")
+local JumpInput=makeInput(buildPage,"JumpPower (25-75)","50")
+local originalMovement=nil
+local function restoreMovement()
+    local hum=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if hum and originalMovement then
+        pcall(function()
+            hum.WalkSpeed=originalMovement.speed
+            hum.JumpPower=originalMovement.jump
+            hum.UseJumpPower=originalMovement.usesJump
+        end)
+    end
+    originalMovement=nil
+end
+State.restoreMovement=restoreMovement
+makeButton(buildPage,"APPLY LOCAL MOVEMENT VALUES",function()
+    local speed,jump=tonumber(SpeedInput.Text),tonumber(JumpInput.Text)
+    if not speed or not jump or speed<8 or speed>32 or jump<25 or jump>75 then
+        notify("WalkSpeed 8-32, JumpPower 25-75.");return
+    end
+    local hum=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if not hum then notify("Humanoid unavailable.");return end
+    if not originalMovement then
+        originalMovement={speed=hum.WalkSpeed,jump=hum.JumpPower,usesJump=hum.UseJumpPower}
+    end
+    hum.UseJumpPower=true
+    hum.WalkSpeed=speed
+    hum.JumpPower=jump
+    notify("Local movement values applied.")
+end,"card")
+makeButton(buildPage,"RESTORE ORIGINAL MOVEMENT",function()
+    restoreMovement()
+    notify("Original movement values restored where available.")
+end,"quiet")
+
+section(StylePage,"SAVE SETTINGS & WAYPOINTS","Optional executor file API; session-only fallback.")
+makeButton(StylePage,"SAVE MY PREFERENCES",storeSettings,"cta")
+makeButton(StylePage,"LOAD SAVED PREFERENCES",loadSettings,"card")
+State.clearToolkitHighlights=clearToolkitHighlights
 
 applyTheme()
 for key, b in pairs(themeButtons) do
