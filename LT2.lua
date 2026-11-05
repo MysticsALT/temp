@@ -1301,6 +1301,7 @@ local MoneyRiskInput = makeInput(Dupes, "Type SEND to unlock", "")
 local MoneyResult = info(Dupes, "MONEY TEST  /  IDLE", 92, "text")
 local MoneyButton
 local MoneyArmedExpiry = 0
+local MoneyArmedAmount = nil
 local MoneyTestBusy = false
 local LastMoneyTest = -1000
 MoneyButton = makeButton(Dupes, "BEGIN LEGACY MONEY DUPE TEST", function()
@@ -1330,8 +1331,9 @@ MoneyButton = makeButton(Dupes, "BEGIN LEGACY MONEY DUPE TEST", function()
         MoneyResult.Text = "UNAVAILABLE  /  Historical Donate remote not found."
         notify("Old self-donation call is no longer available."); return
     end
-    if os.clock() > MoneyArmedExpiry then
+    if os.clock() > MoneyArmedExpiry or MoneyArmedAmount ~= amount then
         MoneyArmedExpiry = os.clock() + 10
+        MoneyArmedAmount = amount
         MoneyButton.Text = "CONFIRM SELF-DONATION TEST"
         MoneyResult.Text = "ARMED  /  " .. tostring(amount) ..
             " money may be lost. Click again within 10 seconds."
@@ -1339,6 +1341,7 @@ MoneyButton = makeButton(Dupes, "BEGIN LEGACY MONEY DUPE TEST", function()
     end
 
     MoneyArmedExpiry = 0
+    MoneyArmedAmount = nil
     LastMoneyTest = os.clock()
     MoneyTestBusy = true
     MoneyButton.Text = "WAITING FOR SERVER..."
