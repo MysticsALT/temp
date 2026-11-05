@@ -286,7 +286,37 @@ VisualFX.MainAuraGradient.Transparency = NumberSequence.new({
 })
 VisualFX.MainAuraGradient.Parent = VisualFX.MainAura
 
--- Atmospheric particles sit behind the interface controls.
+-- Slow cinematic light behind the glass interface. No per-frame callbacks.
+for i = 1, 2 do
+    local orb = Instance.new("Frame")
+    orb.Name = "MysticsAmbientOrb" .. i
+    orb.AnchorPoint = Vector2.new(0.5, 0.5)
+    orb.Size = UDim2.fromOffset(i == 1 and 242 or 202, i == 1 and 242 or 202)
+    orb.Position = UDim2.fromScale(i == 1 and 0.18 or 0.84, i == 1 and 0.20 or 0.81)
+    orb.BackgroundColor3 = Theme.Accent2
+    orb.BackgroundTransparency = 0.94
+    orb.BorderSizePixel = 0
+    orb.ZIndex = 1
+    orb.Parent = Main
+    Corner(orb, 999)
+    local orbGradient = Instance.new("UIGradient")
+    orbGradient.Rotation = i == 1 and 38 or 148
+    orbGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.45, 0.38),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    orbGradient.Parent = orb
+    TweenService:Create(orb,
+        TweenInfo.new(9 + i * 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        {
+            Position = UDim2.fromScale(i == 1 and 0.38 or 0.68, i == 1 and 0.33 or 0.66),
+            BackgroundTransparency = 0.975
+        }
+    ):Play()
+end
+
+-- Existing theme particles remain behind controls.
 local Atmosphere = Instance.new("Frame")
 Atmosphere.Name = "ThemeAtmosphere"
 Atmosphere.Size = UDim2.fromScale(1, 1)
@@ -304,13 +334,31 @@ Header.BackgroundColor3 = Theme.Panel
 Header.BorderSizePixel = 0
 Header.Parent = Main
 
-Corner(Header, 15)
+Corner(Header, 22)
 local HeaderGradient = Gradient(
     Header,
-    Theme.GradientA,
-    Theme.GradientB,
+    Theme.Panel2,
+    Theme.Panel,
     0
 )
+
+VisualFX.HeaderSheen = Instance.new("Frame")
+VisualFX.HeaderSheen.Name = "HeaderGlassSheen"
+VisualFX.HeaderSheen.Position = UDim2.fromOffset(2, 2)
+VisualFX.HeaderSheen.Size = UDim2.new(1, -4, 0, 62)
+VisualFX.HeaderSheen.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+VisualFX.HeaderSheen.BackgroundTransparency = 0.965
+VisualFX.HeaderSheen.BorderSizePixel = 0
+VisualFX.HeaderSheen.ZIndex = 1
+VisualFX.HeaderSheen.Parent = Header
+Corner(VisualFX.HeaderSheen, 20)
+VisualFX.HeaderSheenGradient = Instance.new("UIGradient")
+VisualFX.HeaderSheenGradient.Rotation = 90
+VisualFX.HeaderSheenGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.20),
+    NumberSequenceKeypoint.new(1, 1)
+})
+VisualFX.HeaderSheenGradient.Parent = VisualFX.HeaderSheen
 
 VisualFX.HeaderRule = Instance.new("Frame")
 VisualFX.HeaderRule.Name = "HeaderAccentRule"
@@ -395,15 +443,46 @@ Creator.TextSize = 10
 Creator.TextXAlignment = Enum.TextXAlignment.Left
 Creator.Parent = Header
 
+-- Signature Mystics monogram: round glass badge with glint and slow float.
+VisualFX.Emblem = Instance.new("Frame")
+VisualFX.Emblem.Name = "MysticsEmblem"
+VisualFX.Emblem.Size = UDim2.fromOffset(44, 44)
+VisualFX.Emblem.Position = UDim2.new(1, -143, 0, 17)
+VisualFX.Emblem.BackgroundColor3 = Color3.fromRGB(54, 57, 74)
+VisualFX.Emblem.BackgroundTransparency = 0.12
+VisualFX.Emblem.BorderSizePixel = 0
+VisualFX.Emblem.ZIndex = 2
+VisualFX.Emblem.Parent = Header
+Corner(VisualFX.Emblem, 999)
+VisualFX.EmblemStroke = Stroke(VisualFX.Emblem, Theme.Accent2, 1.6)
+VisualFX.EmblemStroke.Transparency = 0.15
+VisualFX.EmblemGradient = Gradient(VisualFX.Emblem, Theme.Accent, Theme.Panel2, 45)
+VisualFX.EmblemGradient.Offset = Vector2.new(-1, 0)
+
 local Decoration = Instance.new("TextLabel")
-Decoration.Size = UDim2.fromOffset(55, 45)
-Decoration.Position = UDim2.new(1, -150, 0, 18)
+Decoration.Name = "MysticsMonogram"
+Decoration.Size = UDim2.fromScale(1, 1)
+Decoration.Position = UDim2.fromScale(0, 0)
 Decoration.BackgroundTransparency = 1
-Decoration.Text = Theme.Icon
-Decoration.TextColor3 = Theme.Accent2
-Decoration.Font = Enum.Font.GothamBold
-Decoration.TextSize = 29
-Decoration.Parent = Header
+Decoration.Text = "M"
+Decoration.TextColor3 = Theme.Text
+Decoration.Font = Enum.Font.GothamBlack
+Decoration.TextSize = 23
+Decoration.ZIndex = 3
+Decoration.Parent = VisualFX.Emblem
+
+TweenService:Create(VisualFX.Emblem,
+    TweenInfo.new(4.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+    {Position = UDim2.new(1, -143, 0, 13)}
+):Play()
+TweenService:Create(VisualFX.EmblemStroke,
+    TweenInfo.new(3.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+    {Transparency = 0.48}
+):Play()
+TweenService:Create(VisualFX.EmblemGradient,
+    TweenInfo.new(6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1),
+    {Offset = Vector2.new(1, 0)}
+):Play()
 
 local MinButton = Instance.new("TextButton")
 MinButton.Size = UDim2.fromOffset(28, 28)
