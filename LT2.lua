@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V1.8 | Self-contained utility module + opt-in legacy research tests
+-- V1.9 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -1414,7 +1414,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.8 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.9 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1768,6 +1768,7 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
     local species = treeType and treeType:IsA("ValueBase") and tostring(treeType.Value) or nil
     local logRoot = Workspace:FindFirstChild("LogModels")
     if not logRoot then
+        harvestOrigin, harvestCharacter = nil, nil
         HarvestStatus.Text = "HARVEST / NO LOG FOLDER; CAN'T IDENTIFY CUT WOOD"
         return
     end
@@ -1829,41 +1830,69 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
                 failure = "TREE CUT DATA MISSING"
                 return
             end
-            HarvestStatus.Text = "HARVEST / CUTTING ONE TREE"
-            for hit=1,28 do
-                if not active() then return end
+            HarvestStatus.Text = "HARVEST / CUTTING UNTIL LOG IS CONFIRMED"
+            local MAX_CUT_ATTEMPTS = 120
+            local MAX_CUT_SECONDS = 50
+            local cutStarted = os.clock()
+            local hitCount = 0
+            local treeGone = false
+            -- The log listener is the positive confirmation of success:
+            -- it must be a newly spawned, locally owned log of the same species
+            -- beside the selected tree. Tree removal alone is not sufficient.
+            while active() and hitCount < MAX_CUT_ATTEMPTS
+                and os.clock() - cutStarted < MAX_CUT_SECONDS do
                 if findLog() then break end
-                if not section.Parent or not tree.Parent then break end
+                if not section.Parent or not tree.Parent or not tree:FindFirstChild("CutEvent") then
+                    treeGone = true
+                    break
+                end
                 local charRoot = character:FindFirstChild("HumanoidRootPart")
                 if not charRoot or (charRoot.Position - section.Position).Magnitude > 18 then
-                    failure = "LEFT CUTTING RANGE"; break
+                    failure = "LEFT CUTTING RANGE"
+                    break
                 end
                 local held = equippedAxe()
                 local value = held and held:FindFirstChild("ToolName")
                 local damage = value and axeDamage[tostring(value.Value)]
-                if not damage then failure = "AXE NO LONGER EQUIPPED"; break end
+                if not damage then
+                    failure = "AXE NO LONGER EQUIPPED"
+                    break
+                end
                 local success = pcall(function()
-                    cutRemote:FireServer(cutEvent,{
+                    cutRemote:FireServer(cutEvent, {
                         tool=held, faceVector=Vector3.new(0,0,-1),
                         height=0.3, sectionId=id.Value, hitPoints=damage,
                         cooldown=0.22, cuttingClass="Axe"
                     })
                 end)
-                if not success then failure = "CUT REQUEST FAILED"; break end
-                HarvestStatus.Text = "HARVEST / CUTTING: " .. hit .. "/28"
+                if not success then
+                    failure = "CUT REQUEST FAILED"
+                    break
+                end
+                hitCount += 1
+                HarvestStatus.Text = "HARVEST / CUTTING: " .. hitCount
+                    .. "/" .. MAX_CUT_ATTEMPTS
+                    .. "\nWAITING FOR CONFIRMED OWNED LOG..."
                 task.wait(0.28)
-                if not tree:FindFirstChild("CutEvent") then break end
             end
-            for _=1,12 do
-                if not active() or findLog() then break end
-                task.wait(0.25)
+            -- Allow ownership/TreeClass replication a short grace period.
+            -- Never mark the tree as cut solely because enough hits were sent.
+            if active() and not findLog() then
+                HarvestStatus.Text = treeGone and "HARVEST / TREE CHANGED; VERIFYING LOG"
+                    or "HARVEST / VERIFYING CUT RESULT"
+                local verifyStart = os.clock()
+                while active() and not findLog() and os.clock() - verifyStart < 6 do
+                    task.wait(0.2)
+                end
             end
             if not active() then return end
             local log = findLog()
             if not log then
-                failure = failure or "NO OWNED CUT LOG DETECTED"
+                failure = failure or ("CUT NOT CONFIRMED AFTER " .. hitCount
+                    .. " HITS; NO MATCHING OWNED LOG")
                 return
             end
+            HarvestStatus.Text = "HARVEST / CUT CONFIRMED (" .. hitCount .. " HITS)"
             if not belongsToLocal(log) then
                 failure = "LOG OWNERSHIP NOT CONFIRMED"
                 return
@@ -2333,4 +2362,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v1.8 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v1.9 ready. Historical waypoints are unverified.")
