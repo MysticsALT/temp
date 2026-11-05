@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V1.6 | Self-contained utility module + opt-in legacy research tests
+-- V1.7 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -421,6 +421,7 @@ local function cleanup()
     clearHighlights()
     if State.clearToolkitHighlights then pcall(State.clearToolkitHighlights) end
     if State.restoreMovement then pcall(State.restoreMovement) end
+    if State.stopHarvest then pcall(State.stopHarvest) end
     if State.stopAutoCut then pcall(State.stopAutoCut) end
     if State.stopDupeTest then pcall(State.stopDupeTest) end
     if State.restoreLighting then pcall(State.restoreLighting) end
@@ -1413,7 +1414,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.6 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.7 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1694,6 +1695,215 @@ local function getAxeForCutting()
     end
     return nil
 end
+
+-- Single-tree harvest return: uses an existing highlighted target.
+-- The spawned log is only moved if ownership can be confirmed as local.
+section(toolkit, "HIGHLIGHTED TREE HARVEST",
+    "Teleport to nearest highlighted tree, cut one, then return with its log.")
+local HarvestStatus = info(toolkit, "HARVEST / IDLE", 122, "text")
+local harvestRunning = false
+local harvestToken = 0
+local function stopHarvest(message)
+    harvestToken += 1
+    harvestRunning = false
+    if not State.closed then HarvestStatus.Text = "HARVEST / " .. (message or "STOPPED") end
+end
+State.stopHarvest = function() stopHarvest("CLOSED") end
+makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE", function()
+    if harvestRunning or cuttingActive then
+        notify("Stop other cutting activity before harvesting.")
+        return
+    end
+    local target, distance
+    local character = LocalPlayer.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not root or not humanoid or humanoid.Health <= 0 then
+        notify("Spawn your character before harvesting."); return
+    end
+    for _, highlight in ipairs(toolkitHighlights) do
+        local tree = highlight and highlight.Adornee
+        if highlight and highlight.Parent and tree and tree.Parent
+            and tree:IsA("Model") and tree:FindFirstChild("CutEvent") then
+            local part = getCutSection(tree)
+            if part then
+                local d = (part.Position - root.Position).Magnitude
+                if not distance or d < distance then
+                    distance = d
+                    target = {tree=tree,section=part}
+                end
+            end
+        end
+    end
+    if not target then
+        notify("Scan trees, then highlight trees before harvesting."); return
+    end
+    local tool = getAxeForCutting()
+    local toolName = tool and tool:FindFirstChild("ToolName")
+    if not toolName or not axeDamage[tostring(toolName.Value)] then
+        notify("Equip a supported axe before harvesting."); return
+    end
+    local interaction = game:GetService("ReplicatedStorage"):FindFirstChild("Interaction")
+    local cutRemote = interaction and interaction:FindFirstChild("RemoteProxy")
+    if not cutRemote or not cutRemote:IsA("RemoteEvent") then
+        notify("Cutting remote not available."); return
+    end
+    local startCFrame = root.CFrame
+    local tree = target.tree
+    local treeType = tree:FindFirstChild("TreeClass")
+    local species = treeType and treeType:IsA("ValueBase") and tostring(treeType.Value) or nil
+    local logRoot = Workspace:FindFirstChild("LogModels")
+    if not logRoot then
+        HarvestStatus.Text = "HARVEST / NO LOG FOLDER; CAN'T IDENTIFY CUT WOOD"
+        return
+    end
+    local dragRemote = interaction:FindFirstChild("ClientIsDragging")
+    local ownershipRemote = interaction:FindFirstChild("ClientRequestOwnership")
+    local foundLog = nil
+    local logListener
+    harvestRunning = true
+    harvestToken += 1
+    local token = harvestToken
+    task.spawn(function()
+        local function active()
+            return harvestRunning and harvestToken == token and not State.closed
+        end
+        local function findLog()
+            if foundLog and foundLog.Parent then return foundLog end
+            return nil
+        end
+        local function identifyLog(candidate)
+            if not candidate or not candidate.Parent or not active() then return end
+            if not candidate:IsA("Model") then return end
+            local owner = candidate:FindFirstChild("Owner") or candidate:WaitForChild("Owner", 2)
+            if not active() or not owner or not owner:IsA("ValueBase")
+                or not ownerIsLocal(owner.Value) then return end
+            if species then
+                local cls = candidate:FindFirstChild("TreeClass")
+                    or candidate:WaitForChild("TreeClass", 2)
+                if not cls or not cls:IsA("ValueBase") or tostring(cls.Value) ~= species then
+                    return
+                end
+            end
+            -- Only adopt logs spawned beside the selected tree, not existing items.
+            local pos = objectPosition(candidate)
+            if pos and (pos - target.section.Position).Magnitude < 40 then
+                foundLog = candidate
+            end
+        end
+        logListener = logRoot.ChildAdded:Connect(function(candidate)
+            task.spawn(identifyLog, candidate)
+        end)
+        local ok, failure = pcall(function()
+            HarvestStatus.Text = "HARVEST / MOVING TO HIGHLIGHTED TREE"
+            local section = target.section
+            if not active() or not section.Parent or not tree.Parent then return end
+            -- Stand beside, not inside, the trunk.
+            local destination = section.Position + Vector3.new(4, 2, 4)
+            character:PivotTo(CFrame.new(destination))
+            task.wait(0.6)
+            local movedRoot = character:FindFirstChild("HumanoidRootPart")
+            if not active() or not movedRoot
+                or (movedRoot.Position - section.Position).Magnitude > 18 then
+                failure = "TELEPORT DID NOT REACH TREE"
+                return
+            end
+            local id = section:FindFirstChild("ID")
+            local cutEvent = tree:FindFirstChild("CutEvent")
+            if not id or not id:IsA("ValueBase") or not cutEvent then
+                failure = "TREE CUT DATA MISSING"
+                return
+            end
+            HarvestStatus.Text = "HARVEST / CUTTING ONE TREE"
+            for hit=1,28 do
+                if not active() then return end
+                if findLog() then break end
+                if not section.Parent or not tree.Parent then break end
+                local charRoot = character:FindFirstChild("HumanoidRootPart")
+                if not charRoot or (charRoot.Position - section.Position).Magnitude > 18 then
+                    failure = "LEFT CUTTING RANGE"; break
+                end
+                local held = equippedAxe()
+                local value = held and held:FindFirstChild("ToolName")
+                local damage = value and axeDamage[tostring(value.Value)]
+                if not damage then failure = "AXE NO LONGER EQUIPPED"; break end
+                local success = pcall(function()
+                    cutRemote:FireServer(cutEvent,{
+                        tool=held, faceVector=Vector3.new(0,0,-1),
+                        height=0.3, sectionId=id.Value, hitPoints=damage,
+                        cooldown=0.22, cuttingClass="Axe"
+                    })
+                end)
+                if not success then failure = "CUT REQUEST FAILED"; break end
+                HarvestStatus.Text = "HARVEST / CUTTING: " .. hit .. "/28"
+                task.wait(0.28)
+                if not tree:FindFirstChild("CutEvent") then break end
+            end
+            for _=1,12 do
+                if not active() or findLog() then break end
+                task.wait(0.25)
+            end
+            if not active() then return end
+            local log = findLog()
+            if not log then
+                failure = failure or "NO OWNED CUT LOG DETECTED"
+                return
+            end
+            if not belongsToLocal(log) then
+                failure = "LOG OWNERSHIP NOT CONFIRMED"
+                return
+            end
+            if not dragRemote or not dragRemote:IsA("RemoteEvent")
+                or not ownershipRemote or not ownershipRemote:IsA("RemoteEvent") then
+                failure = "DRAG REMOTES UNAVAILABLE; LOG LEFT AT TREE"
+                return
+            end
+            HarvestStatus.Text = "HARVEST / BRINGING OWNED LOG BACK"
+            local transportOk = false
+            local logPart = log.PrimaryPart or log:FindFirstChildWhichIsA("BasePart", true)
+            if not logPart then failure = "LOG HAS NO PART"; return end
+            for attempt=1,5 do
+                if not active() or not log.Parent or not belongsToLocal(log) then break end
+                pcall(function() ownershipRemote:FireServer(log) end)
+                pcall(function()
+                    log:PivotTo(startCFrame + Vector3.new(5, 3, 0))
+                    dragRemote:FireServer(log)
+                end)
+                task.wait(0.3)
+                local newPos = objectPosition(log)
+                if newPos and (newPos - startCFrame.Position).Magnitude < 22 then
+                    transportOk = true
+                end
+            end
+            if not transportOk then
+                failure = "LOG RETURN NOT CONFIRMED"
+                return
+            end
+            HarvestStatus.Text = "HARVEST / LOG MOVED LOCALLY; SERVER MAY CORRECT"
+        end)
+        if logListener then logListener:Disconnect() end
+        -- Return the player even if cutting or log movement fails.
+        pcall(function()
+            if character.Parent and humanoid.Health > 0 then
+                character:PivotTo(startCFrame)
+            end
+        end)
+        if token == harvestToken then
+            harvestRunning = false
+            if not State.closed then
+                HarvestStatus.Text = "HARVEST / " ..
+                    (not ok and "ERROR / RETURN REQUESTED" or
+                    failure and (failure .. " / RETURN REQUESTED") or
+                    "PLAYER RETURNED / LOG RETURN ATTEMPTED")
+            end
+        end
+    end)
+end, "cta")
+makeButton(toolkit, "STOP HARVEST / RETURN ME", function()
+    if harvestRunning then stopHarvest("STOPPED / RETURNING")
+    else notify("No highlighted-tree harvest is running.") end
+end, "quiet")
+
 local function nextCutTarget(species, ignored)
     local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not root then return nil end
@@ -2159,4 +2369,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v1.6 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v1.7 ready. Historical waypoints are unverified.")
