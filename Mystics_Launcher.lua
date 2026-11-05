@@ -646,7 +646,45 @@ AccessOverlay.Active = true
 AccessOverlay.ZIndex = 40
 AccessOverlay.Parent = Background
 AddCorner(AccessOverlay, 24)
-AddGradient(AccessOverlay, Color3.fromRGB(78, 18, 42), Color3.fromRGB(23, 6, 15), 90)
+local AccessGradient = AddGradient(AccessOverlay, Color3.fromRGB(96, 21, 51), Color3.fromRGB(23, 6, 15), 90)
+TweenService:Create(AccessGradient,
+    TweenInfo.new(17, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+    {Rotation = 135}
+):Play()
+
+-- Low-overhead drifting ruby lights behind the PIN panel.
+local AccessGlow = Instance.new("Frame")
+AccessGlow.Name = "AccessSoftGlow"
+AccessGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+AccessGlow.Position = UDim2.fromScale(0.5, 0.5)
+AccessGlow.Size = UDim2.new(1, -12, 0, 380)
+AccessGlow.BackgroundColor3 = Color3.fromRGB(222, 48, 99)
+AccessGlow.BackgroundTransparency = 0.93
+AccessGlow.BorderSizePixel = 0
+AccessGlow.ZIndex = 40
+AccessGlow.Parent = AccessOverlay
+AddCorner(AccessGlow, 40)
+TweenService:Create(AccessGlow,
+    TweenInfo.new(4.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+    {BackgroundTransparency = 0.975}
+):Play()
+
+for i = 1, 10 do
+    local spark = Instance.new("Frame")
+    spark.Name = "AccessSpark" .. i
+    spark.Size = UDim2.fromOffset(i % 3 == 0 and 4 or 2, i % 3 == 0 and 4 or 2)
+    spark.Position = UDim2.fromScale(0.06 + ((i * 23) % 87) / 100, 0.08 + ((i * 17) % 83) / 100)
+    spark.BackgroundColor3 = i % 2 == 0 and Color3.fromRGB(255, 178, 202) or Color3.fromRGB(229, 84, 128)
+    spark.BackgroundTransparency = 0.57
+    spark.BorderSizePixel = 0
+    spark.ZIndex = 40
+    spark.Parent = AccessOverlay
+    AddCorner(spark, 99)
+    TweenService:Create(spark,
+        TweenInfo.new(3.5 + i * 0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        {Position = spark.Position + UDim2.new(0, 0, -0.02, 0), BackgroundTransparency = 0.94}
+    ):Play()
+end
 
 local AccessPanel = Instance.new("Frame")
 AccessPanel.Name = "AccessPanel"
