@@ -1265,7 +1265,7 @@ SelectPage("PERFORMANCE")
 Section("ANTI-AFK & PERFORMANCE")
 
 local AntiAfkButton
-local AntiAfkStatus = Label("ANTI-AFK              OFF", 22, Theme.Muted)
+local AntiAfkStatus = Label("PREVENT IDLE DISCONNECTS", 22, Theme.Muted)
 local FPSMonitorLabel = Label("LIVE FPS               --", 22, Theme.Accent2)
 local PingMonitorLabel = Label("LIVE PING              --", 22, Theme.Accent2)
 local UptimeMonitorLabel = Label("SCRIPT UPTIME          00:00:00", 22, Theme.Muted)
@@ -1291,16 +1291,16 @@ local function SetAntiAfkEnabled(enabled)
     end
 
     if AntiAfkButton then
-        AntiAfkButton.Text = AntiAfkEnabled and "ANTI-AFK  /  ON" or "ANTI-AFK  /  OFF"
+        AntiAfkButton.Text = AntiAfkEnabled and "IDLE GUARD: ON" or "IDLE GUARD: OFF"
     end
-    AntiAfkStatus.Text = AntiAfkEnabled and "ANTI-AFK              ON" or "ANTI-AFK              OFF"
-    AntiAfkStatus.TextColor3 = AntiAfkEnabled and Color3.fromRGB(125, 235, 155) or Theme.Muted
+    AntiAfkStatus.Text = "PREVENT IDLE DISCONNECTS"
+    AntiAfkStatus.TextColor3 = Theme.Muted
 end
 
-AntiAfkButton = MakeButton("ANTI-AFK  /  OFF", function()
+AntiAfkButton = MakeButton("IDLE GUARD: OFF", function()
     SetAntiAfkEnabled(not AntiAfkEnabled)
     Notify(AntiAfkEnabled and "Anti-AFK enabled." or "Anti-AFK disabled.")
-end)
+end, nil, "toggle")
 
 local FpsWindowStart = os.clock()
 FpsConnection = RunService.RenderStepped:Connect(function()
@@ -2212,11 +2212,11 @@ UpdateSessionValue()
 --========================================================
 
 SelectPage("AUTOMATION")
-Section("AUTOMATION SETTINGS")
+Section("TIMING & LIMITS")
 
 local ModeButton
 
-ModeButton = MakeButton("MODE  /  SMART", function()
+ModeButton = MakeButton("UNBOX MODE: SMART", function()
     if Mode == "SMART" then
         Mode = "TIMED"
     elseif Mode == "TIMED" then
@@ -2225,8 +2225,8 @@ ModeButton = MakeButton("MODE  /  SMART", function()
         Mode = "SMART"
     end
 
-    ModeButton.Text = "MODE  /  " .. Mode
-end)
+    ModeButton.Text = "UNBOX MODE: " .. Mode
+end, nil, "toggle")
 
 Label("CLICK DELAY (0.5–30 SECONDS)", 20, Theme.Muted)
 local DelayInput = MakeInput("Seconds", "2")
@@ -2234,18 +2234,18 @@ local DelayInput = MakeInput("Seconds", "2")
 Label("MAX CASES (0 = UNLIMITED)", 20, Theme.Muted)
 local MaxInput = MakeInput("Case limit", "0")
 
-Label("RANDOM EXTRA DELAY", 20, Theme.Muted)
+Label("EXTRA RANDOM DELAY (SECONDS)", 20, Theme.Muted)
 local RandomInput = MakeInput("Extra seconds", "0")
 
 local RandomButton
 
-RandomButton = MakeButton("RANDOM DELAY  /  OFF", function()
+RandomButton = MakeButton("RANDOMIZE TIMING: OFF", function()
     RandomEnabled = not RandomEnabled
 
     RandomButton.Text = RandomEnabled
-        and "RANDOM DELAY  /  ON"
-        or "RANDOM DELAY  /  OFF"
-end)
+        and "RANDOMIZE TIMING: ON"
+        or "RANDOMIZE TIMING: OFF"
+end, nil, "toggle")
 
 --========================================================
 -- BUTTON DETECTION
@@ -2628,7 +2628,7 @@ end
 -- MAIN CONTROLS
 --========================================================
 
-Section("CONTROL PANEL")
+Section("SESSION ACTIONS")
 
 local function Start()
     if Running then return end
@@ -2672,7 +2672,7 @@ local function Start()
     Paused = false
 
     Status.Text = "●  RUNNING"
-    PauseButton.Text = "PAUSE AUTOMATION"
+    PauseButton.Text = "PAUSE RUN"
 
     Notify("RL Crate Unboxing V1.6 started.")
 
@@ -2723,15 +2723,15 @@ local function Stop()
     UpdateStats()
 
     if PauseButton then
-        PauseButton.Text = "PAUSE AUTOMATION"
+        PauseButton.Text = "PAUSE RUN"
     end
 
     Notify("Mystics automation stopped.")
 end
 
-MakeButton("START AUTOMATION", Start)
+MakeButton("START UNBOXING", Start, nil, "primary")
 
-PauseButton = MakeButton("PAUSE AUTOMATION", function()
+PauseButton = MakeButton("PAUSE RUN", function()
     if not Running then return end
 
     Paused = not Paused
@@ -2741,15 +2741,15 @@ PauseButton = MakeButton("PAUSE AUTOMATION", function()
     end
 
     PauseButton.Text = Paused
-        and "RESUME AUTOMATION"
-        or "PAUSE AUTOMATION"
+        and "RESUME RUN"
+        or "PAUSE RUN"
 
     Status.Text = Paused
         and "●  PAUSED"
         or "●  RUNNING"
 end)
 
-MakeButton("EMERGENCY STOP", Stop, Theme.Panel2)
+MakeButton("STOP SESSION", Stop, Theme.Panel2, "danger")
 
 --========================================================
 -- APPEARANCE & PROFILES TAB
@@ -3187,7 +3187,7 @@ MakeButton("LOAD PROFILE", function()
     Mode = p.Mode
     ThemeIndex = p.Theme
 
-    ModeButton.Text = "MODE  /  " .. Mode
+    ModeButton.Text = "UNBOX MODE: " .. Mode
     ApplyTheme()
 
     Notify("Profile loaded.")
