@@ -527,15 +527,15 @@ VisualFX.TabShell = Instance.new("Frame")
 VisualFX.TabShell.Name = "TabNavigationShell"
 VisualFX.TabShell.Position = TabBar.Position
 VisualFX.TabShell.Size = TabBar.Size
-VisualFX.TabShell.BackgroundColor3 = Theme.Panel
-VisualFX.TabShell.BackgroundTransparency = 0.07
+VisualFX.TabShell.BackgroundColor3 = Color3.fromRGB(48, 54, 70)
+VisualFX.TabShell.BackgroundTransparency = 0.02
 VisualFX.TabShell.BorderSizePixel = 0
 VisualFX.TabShell.ZIndex = 2
 VisualFX.TabShell.Parent = Main
 Corner(VisualFX.TabShell, 12)
 VisualFX.TabShellStroke = Stroke(VisualFX.TabShell, Theme.Border, 1)
 VisualFX.TabShellStroke.Transparency = 0.33
-VisualFX.TabShellGradient = Gradient(VisualFX.TabShell, Theme.Panel2, Theme.Panel, 90)
+VisualFX.TabShellGradient = Gradient(VisualFX.TabShell, VisualFX.GlassTop, VisualFX.GlassBottom, 90)
 VisualFX.TabShellGradient.Transparency = NumberSequence.new({
     NumberSequenceKeypoint.new(0, 0.04),
     NumberSequenceKeypoint.new(1, 0.20)
@@ -562,20 +562,38 @@ VisualFX.ContentShell = Instance.new("Frame")
 VisualFX.ContentShell.Name = "ContentGlassShell"
 VisualFX.ContentShell.Position = UDim2.fromOffset(12, 145)
 VisualFX.ContentShell.Size = UDim2.new(1, -24, 1, -157)
-VisualFX.ContentShell.BackgroundColor3 = Theme.Panel
-VisualFX.ContentShell.BackgroundTransparency = 0.06
+VisualFX.ContentShell.BackgroundColor3 = Color3.fromRGB(43, 49, 64)
+VisualFX.ContentShell.BackgroundTransparency = 0.02
 VisualFX.ContentShell.BorderSizePixel = 0
 VisualFX.ContentShell.ZIndex = 1
 VisualFX.ContentShell.Parent = Main
 Corner(VisualFX.ContentShell, 16)
 VisualFX.ContentShellStroke = Stroke(VisualFX.ContentShell, Theme.Border, 1)
 VisualFX.ContentShellStroke.Transparency = 0.38
-VisualFX.ContentShellGradient = Gradient(VisualFX.ContentShell, Theme.Panel2, Theme.Panel, 90)
+VisualFX.ContentShellGradient = Gradient(VisualFX.ContentShell, VisualFX.GlassTop, VisualFX.GlassBottom, 90)
 VisualFX.ContentShellGradient.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 0.04),
-    NumberSequenceKeypoint.new(0.58, 0.16),
-    NumberSequenceKeypoint.new(1, 0.08)
+    NumberSequenceKeypoint.new(0, 0.06),
+    NumberSequenceKeypoint.new(0.58, 0.10),
+    NumberSequenceKeypoint.new(1, 0.06)
 })
+
+VisualFX.ContentSheen = Instance.new("Frame")
+VisualFX.ContentSheen.Name = "GlassTopHighlight"
+VisualFX.ContentSheen.Position = UDim2.fromOffset(16, 13)
+VisualFX.ContentSheen.Size = UDim2.new(1, -32, 0, 1)
+VisualFX.ContentSheen.BackgroundColor3 = Color3.fromRGB(244, 248, 255)
+VisualFX.ContentSheen.BackgroundTransparency = 0.83
+VisualFX.ContentSheen.BorderSizePixel = 0
+VisualFX.ContentSheen.ZIndex = 1
+VisualFX.ContentSheen.Parent = VisualFX.ContentShell
+VisualFX.ContentSheenGradient = Instance.new("UIGradient")
+VisualFX.ContentSheenGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(0.22, 0.54),
+    NumberSequenceKeypoint.new(0.78, 0.54),
+    NumberSequenceKeypoint.new(1, 1)
+})
+VisualFX.ContentSheenGradient.Parent = VisualFX.ContentSheen
 
 VisualFX.ContentSweep = Instance.new("Frame")
 VisualFX.ContentSweep.Name = "ContentAccentSweep"
@@ -2431,7 +2449,7 @@ local function StartThemeAtmosphere()
 
             particle.Position = UDim2.fromScale(startX, startY)
             particle.Parent = Atmosphere
-            local duration = isBat and math.random(7, 11) or (isObsidian and math.random(5, 9) or math.random(6, 11))
+            local duration = isPumpkin and math.random(7, 11) or (isObsidian and math.random(5, 9) or math.random(6, 11))
             local tween = TweenService:Create(
                 particle,
                 TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
@@ -2445,7 +2463,7 @@ local function StartThemeAtmosphere()
             tween.Completed:Connect(function()
                 if particle.Parent then particle:Destroy() end
             end)
-            task.wait(isBat and 0.7 or (isObsidian and 0.45 or 0.25))
+            task.wait(isPumpkin and 0.85 or (isObsidian and 0.75 or 0.62))
         end
     end)
 end
