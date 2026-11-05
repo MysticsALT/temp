@@ -2496,8 +2496,8 @@ local function ApplyTheme()
     Header.BackgroundColor3 = Theme.Panel
     VisualFX.MainAura.BackgroundColor3 = Theme.Accent2
     VisualFX.HeaderRule.BackgroundColor3 = Theme.Accent2
-    VisualFX.TabShell.BackgroundColor3 = Color3.fromRGB(48, 54, 70)
-    VisualFX.ContentShell.BackgroundColor3 = Color3.fromRGB(43, 49, 64)
+    VisualFX.TabShell.BackgroundColor3 = Color3.fromRGB(88, 100, 121)
+    VisualFX.ContentShell.BackgroundColor3 = Color3.fromRGB(82, 94, 115)
     VisualFX.ContentSweep.BackgroundColor3 = Theme.Accent2
     VisualFX.EmblemStroke.Color = Theme.Accent2
     VisualFX.EmblemGradient.Color = ColorSequence.new(Theme.Accent, Theme.Panel2)
@@ -2510,8 +2510,8 @@ local function ApplyTheme()
 
     MainStroke.Color = Theme.Border
     MainGradient.Color = ColorSequence.new(
-        Theme.Background:Lerp(Theme.Panel, 0.40),
-        Theme.Background
+        Theme.Panel:Lerp(Color3.fromRGB(62, 72, 91), 0.58),
+        Theme.Background:Lerp(Color3.fromRGB(52, 60, 80), 0.72)
     )
 
     HeaderGradient.Color = ColorSequence.new(
@@ -2542,22 +2542,25 @@ local function ApplyTheme()
             end
 
         elseif obj:IsA("TextBox") then
-            obj.BackgroundColor3 = Theme.Panel2
-            obj.TextColor3 = Theme.Text
-            obj.PlaceholderColor3 = Theme.Muted
+            obj.BackgroundColor3 = VisualFX.LabelBackground
+            obj.TextColor3 = Color3.fromRGB(255, 255, 255)
+            obj.TextTransparency = 0
+            obj.PlaceholderColor3 = Color3.fromRGB(233, 238, 246)
 
         elseif obj:IsA("TextButton") then
             if obj == MinButton then
                 obj.BackgroundColor3 = Theme.Panel2
             elseif obj:GetAttribute("MysticsGlassButton") and obj:GetAttribute("MysticsButtonTone") == "secondary" then
-                obj.BackgroundColor3 = Color3.fromRGB(59, 66, 84)
-                obj.TextColor3 = Color3.fromRGB(253, 252, 255)
+                obj.BackgroundColor3 = VisualFX.SecondaryBackground
+                obj.TextColor3 = Color3.fromRGB(255, 255, 255)
+                obj.TextTransparency = 0
             elseif obj:GetAttribute("MysticsButtonTone") == "secondary" then
                 obj.BackgroundColor3 = Theme.Panel2
                 obj.TextColor3 = Theme.Text
             elseif obj:GetAttribute("MysticsButtonTone") == "primary" then
-                obj.BackgroundColor3 = Theme.Accent
-                obj.TextColor3 = Theme.Text
+                obj.BackgroundColor3 = Theme.Panel2
+                obj.TextColor3 = Color3.fromRGB(255, 255, 255)
+                obj.TextTransparency = 0
             end
         elseif obj:IsA("Frame") and (obj.Name == "AccentBar") then
             obj.BackgroundColor3 = Theme.Accent2
@@ -2569,7 +2572,8 @@ local function ApplyTheme()
 
         if obj:IsA("TextLabel") and obj:GetAttribute("MysticsTextRole") then
             if obj:GetAttribute("MysticsGlassLabel") then
-                obj.BackgroundColor3 = Color3.fromRGB(58, 65, 82)
+                obj.BackgroundColor3 = VisualFX.LabelBackground
+                obj.TextTransparency = 0
             elseif obj.BackgroundTransparency < 1 then
                 obj.BackgroundColor3 = Theme.Panel
             end
