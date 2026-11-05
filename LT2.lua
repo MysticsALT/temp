@@ -1976,6 +1976,14 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
                 local progress = step / math.max(1,steps)
                 local targetPosition = position:Lerp(destination, progress)
                 HarvestStatus.Text = "HARVEST / MOVING WOOD " .. step .. "/" .. math.max(1,steps)
+                -- Stay near the log so its physical updates are more likely
+                -- to remain client-owned during transport.
+                if character.Parent and humanoid.Health > 0 then
+                    pcall(function()
+                        character:PivotTo(CFrame.new(targetPosition + Vector3.new(5, 3, 5)))
+                    end)
+                end
+                task.wait(0.1)
                 local accepted = false
                 for retry = 1,5 do
                     if not active() then interrupted = true; break end
