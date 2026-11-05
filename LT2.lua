@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.18 | Self-contained utility module + opt-in legacy research tests
+-- V2.19 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.18  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.19  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.18",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.19",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -481,6 +481,7 @@ local function cleanup()
     if State.clearToolkitHighlights then pcall(State.clearToolkitHighlights) end
     if State.restoreMovement then pcall(State.restoreMovement) end
     if State.clearRareHighlights then pcall(State.clearRareHighlights) end
+    if State.clearWireArtPreview then pcall(State.clearWireArtPreview) end
     if State.stopSell then pcall(State.stopSell) end
     if State.stopHarvest then pcall(State.stopHarvest) end
     if State.stopAutoCut then pcall(State.stopAutoCut) end
@@ -1487,19 +1488,19 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local toolkit = pages.TOOLS
 --========================================================
--- WIRE ART STUDIO
--- Import stroke paths generated from an image, then place them
--- as LT2 wire segments. Coordinates are normalized 0..1 pairs.
 --========================================================
-section(toolkit, "WIRE ART STUDIO", "Paste image-converted stroke JSON. Stand facing the wall where the artwork should appear.")
-local WireArtStatus = info(toolkit, "WIRE ART / WAITING FOR PATH DATA\nFormat: [[[x,y],[x,y],...], ...] with x/y between 0 and 1.", 78, "text")
+-- WIRE ART STUDIO / PREVIEW BEFORE CONFIRMATION
+-- Preset paths are extracted from the approved Mystics cursive sign.
+--========================================================
+section(toolkit, "WIRE ART STUDIO", "Load the Mystics sign or paste custom paths. Preview them in-world, adjust position, then confirm placement.")
+local WireArtStatus = info(toolkit, "WIRE ART / NO PREVIEW\nLoad the Mystics preset or paste image-converted JSON.", 78, "text")
 local WireArtInput = Instance.new("TextBox")
 WireArtInput.Name = "MysticsWireArtJSON"
-WireArtInput.Size = UDim2.new(1, 0, 0, 124)
+WireArtInput.Size = UDim2.new(1, 0, 0, 105)
 WireArtInput.BackgroundColor3 = theme().card
 WireArtInput.BorderSizePixel = 0
 WireArtInput.Text = ""
-WireArtInput.PlaceholderText = "Paste converted wire paths JSON here..."
+WireArtInput.PlaceholderText = "Paste custom wire paths JSON here..."
 WireArtInput.PlaceholderColor3 = theme().muted
 WireArtInput.TextColor3 = theme().text
 WireArtInput.Font = Enum.Font.Code
@@ -1518,6 +1519,28 @@ wirePad.PaddingLeft = UDim.new(0, 10)
 wirePad.PaddingRight = UDim.new(0, 10)
 wirePad.PaddingTop = UDim.new(0, 8)
 wirePad.Parent = WireArtInput
+
+local WireArtWidth = makeInput(toolkit, "Artwork width in studs", "24")
+local WireArtHeight = makeInput(toolkit, "Artwork height in studs", "5.2")
+local WireArtDistance = makeInput(toolkit, "Distance in front of you (studs)", "8")
+local MYSTICS_SIGN_PATHS = "[[[0.992,0.7091],[0.9539,0.703],[0.9238,0.6242],[0.9158,0.5636],[0.9178,0.5152],[0.9539,0.4182],[0.9559,0.3758],[0.9419,0.3212],[0.9218,0.303],[0.9078,0.3394],[0.9038,0.4121],[0.8798,0.3636],[0.8798,0.3152],[0.8878,0.2727],[0.9279,0.2667],[0.9679,0.3455],[0.978,0.4061],[0.978,0.4727],[0.9419,0.5636],[0.9379,0.6],[0.9559,0.6667],[0.9659,0.6667],[0.984,0.6242],[1.0,0.6727]],[[0.8637,0.7091],[0.8377,0.7091],[0.7896,0.5939],[0.7695,0.3939],[0.7715,0.3091],[0.7816,0.2667],[0.8156,0.2667],[0.8758,0.3758],[0.8758,0.4121],[0.8257,0.3212],[0.8116,0.3212],[0.7976,0.3758],[0.7996,0.4848],[0.8156,0.6182],[0.8277,0.6545],[0.8397,0.6606],[0.8517,0.5939],[0.8717,0.6303],[0.8717,0.6727]],[[0.7435,0.7152],[0.7275,0.7091],[0.6814,0.6242],[0.6814,0.5939],[0.7054,0.6303],[0.7114,0.6182],[0.6894,0.3394],[0.6934,0.2606],[0.7214,0.2848],[0.7635,0.3697],[0.7635,0.4],[0.7255,0.3394],[0.7174,0.3697]],[[0.5511,0.7091],[0.513,0.703],[0.483,0.6242],[0.4749,0.5636],[0.477,0.5152],[0.513,0.4182],[0.515,0.3758],[0.501,0.3212],[0.481,0.303],[0.4669,0.3394],[0.4629,0.4121],[0.4389,0.3636],[0.4389,0.3152],[0.4469,0.2727],[0.487,0.2667],[0.5271,0.3455],[0.5371,0.4061],[0.5371,0.4727],[0.501,0.5636],[0.497,0.6],[0.515,0.6667],[0.5251,0.6667],[0.5431,0.6242],[0.5591,0.6727]],[[0.4489,0.7212],[0.4168,0.6788],[0.3968,0.4182],[0.3527,0.3394],[0.3427,0.3818],[0.3667,0.7152],[0.3487,0.703],[0.3066,0.6303],[0.3046,0.6],[0.3287,0.6303],[0.3347,0.6182],[0.3146,0.3636],[0.3166,0.2727],[0.3327,0.2606],[0.3908,0.3697],[0.3928,0.3455],[0.3707,0.103],[0.3527,0.0667],[0.3186,0.0667],[0.2966,0.0848],[0.2826,0.0061],[0.3487,0.0121],[0.3667,0.0424],[0.3968,0.1394],[0.4088,0.2303]],[[0.6413,0.8182],[0.6132,0.7818],[0.6012,0.6424],[0.5812,0.6424],[0.5671,0.6121],[0.5992,0.6],[0.5812,0.3758],[0.5812,0.303],[0.5912,0.2606],[0.6112,0.2727],[0.6633,0.3879],[0.6593,0.4061],[0.6192,0.3394],[0.6092,0.3758],[0.6232,0.6],[0.6613,0.6121],[0.6733,0.6424],[0.6273,0.6485]],[[0.7515,0.9394],[0.7255,0.8848],[0.7375,0.8121],[0.7635,0.8667]],[[0.3427,0.9939],[0.3186,1.0],[0.2786,0.9333],[0.1643,0.4545],[0.1443,0.9273],[0.1323,0.897],[0.0842,0.903],[0.0641,0.8788],[0.038,0.7515],[0.018,0.6909],[0.018,0.6061],[0.0261,0.5515],[0.0521,0.6061],[0.0421,0.6909],[0.0421,0.7515],[0.0501,0.7939],[0.0741,0.8303],[0.1122,0.8303],[0.1162,0.8182],[0.0762,0.4],[0.0641,0.3576],[0.0501,0.3394],[0.016,0.3455],[0.0,0.2727],[0.0501,0.2848],[0.0802,0.3576],[0.0942,0.4303],[0.1242,0.7515],[0.1403,0.2909],[0.1583,0.3333],[0.1944,0.5273],[0.2485,0.7576],[0.2485,0.7091],[0.2104,0.2788],[0.2144,0.2606],[0.2846,0.2848],[0.2926,0.3152],[0.2605,0.3091],[0.2465,0.3455],[0.2545,0.4848],[0.2966,0.9273],[0.3006,0.9394],[0.3287,0.9333]]]"
+local wireArtPreviewParts = {}
+local wireArtPreviewFrame = nil
+local wireArtPreviewPaths = nil
+local wireArtPreviewWidth = nil
+local wireArtPreviewHeight = nil
+
+local function clearWireArtPreview()
+    for _, part in ipairs(wireArtPreviewParts) do
+        pcall(function() part:Destroy() end)
+    end
+    table.clear(wireArtPreviewParts)
+    wireArtPreviewFrame = nil
+    wireArtPreviewPaths = nil
+    wireArtPreviewWidth = nil
+    wireArtPreviewHeight = nil
+end
+State.clearWireArtPreview = clearWireArtPreview
 
 local function decodeWireArt()
     local ok, paths = pcall(function()
@@ -1548,6 +1571,88 @@ local function decodeWireArt()
     return clean
 end
 
+local function readWireArtDimensions()
+    local width = tonumber(WireArtWidth.Text)
+    local height = tonumber(WireArtHeight.Text)
+    local distance = tonumber(WireArtDistance.Text)
+    if not width or not height or not distance or width < 2 or width > 100
+        or height < 1 or height > 30 or distance < 2 or distance > 40 then
+        return nil, nil, nil, "Use width 2-100, height 1-30 and distance 2-40 studs."
+    end
+    return width, height, distance
+end
+
+local function wireArtWorldPoint(frame, pair, width, height)
+    return frame.Position
+        + frame.RightVector * ((pair[1] - 0.5) * width)
+        + frame.UpVector * ((pair[2] - 0.5) * height)
+end
+
+local function previewWireArt()
+    clearWireArtPreview()
+    local paths, err = decodeWireArt()
+    if not paths then WireArtStatus.Text = "WIRE ART / " .. err; return end
+    local width, height, distance, dimErr = readWireArtDimensions()
+    if not width then WireArtStatus.Text = "WIRE ART / " .. dimErr; return end
+    local character = LocalPlayer.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root then WireArtStatus.Text = "WIRE ART / CHARACTER NOT READY"; return end
+
+    local look = root.CFrame.LookVector
+    local center = root.Position + look * distance + Vector3.new(0, 2.5, 0)
+    local frame = CFrame.lookAt(center, center + look, Vector3.new(0, 1, 0))
+    wireArtPreviewFrame = frame
+    wireArtPreviewPaths = paths
+    wireArtPreviewWidth = width
+    wireArtPreviewHeight = height
+
+    local segments = 0
+    for _, path in ipairs(paths) do
+        for index = 1, #path do
+            local nextIndex = index == #path and 1 or index + 1
+            if #path >= 3 or index < #path then
+                local a = wireArtWorldPoint(frame, path[index], width, height)
+                local b = wireArtWorldPoint(frame, path[nextIndex], width, height)
+                local delta = b - a
+                if delta.Magnitude > 0.035 then
+                    local direction = delta.Unit
+                    local up = math.abs(direction:Dot(Vector3.new(0,1,0))) > 0.96
+                        and Vector3.new(1,0,0) or Vector3.new(0,1,0)
+                    local back = direction:Cross(up).Unit
+                    local actualUp = back:Cross(direction).Unit
+                    local preview = Instance.new("Part")
+                    preview.Name = "MysticsWireArtPreview"
+                    preview.Shape = Enum.PartType.Cylinder
+                    preview.Size = Vector3.new(delta.Magnitude, 0.085, 0.085)
+                    preview.CFrame = CFrame.fromMatrix((a+b)/2, direction, actualUp, back)
+                    preview.Anchored = true
+                    preview.CanCollide = false
+                    preview.CanTouch = false
+                    preview.CanQuery = false
+                    preview.Material = Enum.Material.Neon
+                    preview.Color = Color3.fromRGB(255, 35, 58)
+                    preview.Transparency = 0.12
+                    preview.Parent = Workspace
+                    wireArtPreviewParts[#wireArtPreviewParts+1] = preview
+                    segments += 1
+                end
+            end
+        end
+    end
+    WireArtStatus.Text = "PREVIEW READY / " .. #paths .. " WIRES • " .. segments
+        .. " SEGMENTS\nWidth " .. width .. " / Height " .. height
+        .. " / Distance " .. distance .. " studs\nMove or turn, then press UPDATE PREVIEW. Confirm uses this exact preview position."
+end
+
+makeButton(toolkit, "LOAD MYSTICS CURSIVE SIGN PRESET", function()
+    WireArtInput.Text = MYSTICS_SIGN_PATHS
+    previewWireArt()
+end, "cta")
+makeButton(toolkit, "PREVIEW / UPDATE POSITION", previewWireArt, "card")
+makeButton(toolkit, "CLEAR PREVIEW", function()
+    clearWireArtPreview()
+    WireArtStatus.Text = "WIRE ART / PREVIEW CLEARED"
+end, "quiet")
 makeButton(toolkit, "VALIDATE WIRE ART DATA", function()
     local paths, err = decodeWireArt()
     if not paths then WireArtStatus.Text = "WIRE ART / " .. err; return end
@@ -1556,12 +1661,11 @@ makeButton(toolkit, "VALIDATE WIRE ART DATA", function()
     WireArtStatus.Text = "WIRE ART / DATA VALID\n" .. #paths .. " wire strokes / " .. points .. " points"
 end, "card")
 
-makeButton(toolkit, "PLACE WIRE ART IN FRONT OF ME", function()
-    local paths, err = decodeWireArt()
-    if not paths then WireArtStatus.Text = "WIRE ART / " .. err; return end
-    local character = LocalPlayer.Character
-    local root = character and character:FindFirstChild("HumanoidRootPart")
-    if not root then WireArtStatus.Text = "WIRE ART / CHARACTER NOT READY"; return end
+makeButton(toolkit, "CONFIRM & PLACE PREVIEW", function()
+    if not wireArtPreviewFrame or not wireArtPreviewPaths then
+        WireArtStatus.Text = "WIRE ART / PREVIEW FIRST\nLoad a preset or update the preview before confirming."
+        return
+    end
     local replicated = game:GetService("ReplicatedStorage")
     local placeFolder = replicated:FindFirstChild("PlaceStructure")
     local remote = placeFolder and placeFolder:FindFirstChild("ClientPlacedWire")
@@ -1570,6 +1674,7 @@ makeButton(toolkit, "PLACE WIRE ART IN FRONT OF ME", function()
     if not remote or not remote:IsA("RemoteEvent") or not wireInfo then
         WireArtStatus.Text = "WIRE ART / LT2 WIRE PLACEMENT DATA NOT AVAILABLE"; return
     end
+    local character = LocalPlayer.Character
     local wireItems = {}
     local inventoryRoots = {}
     local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
@@ -1582,14 +1687,13 @@ makeButton(toolkit, "PLACE WIRE ART IN FRONT OF ME", function()
             end
         end
     end
-    if #wireItems < #paths then
-        WireArtStatus.Text = "WIRE ART / NEED " .. #paths .. " WIRE ITEMS\nFOUND " .. #wireItems
-            .. ". Buy/collect enough Wire items first."
+    if #wireItems < #wireArtPreviewPaths then
+        WireArtStatus.Text = "WIRE ART / NEED " .. #wireArtPreviewPaths .. " WIRE ITEMS\nFOUND " .. #wireItems
+            .. ". Obtain enough Wire items, then confirm again."
         return
     end
-    local width, height, forward = 24, 5.2, 8
-    local origin = root.Position + root.CFrame.LookVector * forward
-        + Vector3.new(0, 2.2, 0) - root.CFrame.RightVector * (width/2)
+    local paths, frame = wireArtPreviewPaths, wireArtPreviewFrame
+    local width, height = wireArtPreviewWidth, wireArtPreviewHeight
     WireArtStatus.Text = "WIRE ART / PLACING 0 OF " .. #paths
     task.spawn(function()
         local placed, failed = 0, 0
@@ -1597,20 +1701,18 @@ makeButton(toolkit, "PLACE WIRE ART IN FRONT OF ME", function()
             if State.closed then break end
             local worldPoints = {}
             for _, pair in ipairs(path) do
-                worldPoints[#worldPoints+1] = origin
-                    + root.CFrame.RightVector * (pair[1] * width)
-                    + Vector3.new(0, pair[2] * height, 0)
+                worldPoints[#worldPoints+1] = wireArtWorldPoint(frame, pair, width, height)
             end
             local ok = pcall(function()
                 remote:FireServer(wireInfo, worldPoints, LocalPlayer, wireItems[index], true)
             end)
             if ok then placed += 1 else failed += 1 end
             WireArtStatus.Text = "WIRE ART / PLACING " .. index .. " OF " .. #paths
-            task.wait(0.12)
+            task.wait(0.18)
         end
         if not State.closed then
             WireArtStatus.Text = "WIRE ART / REQUESTS SENT: " .. placed .. "\nFAILED: " .. failed
-                .. "\nCheck the plot for server-confirmed placement."
+                .. "\nServer-confirmed placement still needs checking. Preview remains until cleared."
         end
     end)
 end, "cta")
