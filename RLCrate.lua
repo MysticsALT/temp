@@ -251,7 +251,7 @@ end
 
 local Main = Instance.new("Frame")
 Main.Name = "Main"
-Main.Size = UDim2.fromOffset(410, 700)
+Main.Size = UDim2.fromOffset(448, 700)
 Main.Position = UDim2.new(0, 28, 0.06, 0)
 Main.BackgroundColor3 = Theme.Background
 Main.BorderSizePixel = 0
@@ -259,9 +259,13 @@ Main.Active = true
 Main.ClipsDescendants = true
 Main.Parent = Gui
 
-Corner(Main, 22)
+Corner(Main, 24)
 local MainStroke = Stroke(Main, Theme.Border, 1.6)
-local MainGradient = Gradient(Main, Theme.GradientA, Theme.GradientB)
+local MainGradient = Gradient(Main, Theme.Background:Lerp(Theme.Panel, 0.40), Theme.Background)
+VisualFX.GlassTop = Color3.fromRGB(65, 72, 91)
+VisualFX.GlassBottom = Color3.fromRGB(40, 46, 61)
+VisualFX.CardTop = Color3.fromRGB(72, 79, 99)
+VisualFX.CardBottom = Color3.fromRGB(50, 57, 74)
 
 VisualFX.MainAura = Instance.new("Frame")
 VisualFX.MainAura.Name = "MysticsMainAura"
@@ -468,8 +472,8 @@ TabLayout.Parent = TabBar
 
 local PageContainer = Instance.new("Frame")
 PageContainer.Name = "TabPages"
-PageContainer.Position = UDim2.fromOffset(0, 145)
-PageContainer.Size = UDim2.new(1, 0, 1, -150)
+PageContainer.Position = UDim2.fromOffset(12, 145)
+PageContainer.Size = UDim2.new(1, -24, 1, -157)
 PageContainer.BackgroundTransparency = 1
 PageContainer.ClipsDescendants = true
 PageContainer.ZIndex = 3
@@ -539,10 +543,10 @@ local function CreatePage(name)
     page.Parent = PageContainer
 
     local padding = Instance.new("UIPadding")
-    padding.PaddingLeft = UDim.new(0, 13)
-    padding.PaddingRight = UDim.new(0, 13)
-    padding.PaddingTop = UDim.new(0, 8)
-    padding.PaddingBottom = UDim.new(0, 12)
+    padding.PaddingLeft = UDim.new(0, 12)
+    padding.PaddingRight = UDim.new(0, 15)
+    padding.PaddingTop = UDim.new(0, 18)
+    padding.PaddingBottom = UDim.new(0, 20)
     padding.Parent = page
 
     local layout = Instance.new("UIListLayout")
@@ -599,11 +603,11 @@ for index, definition in ipairs(tabDefinitions) do
     tab.AutoButtonColor = false
     tab.Font = Enum.Font.GothamBold
     tab.Text = definition.Text
-    tab.TextSize = 9
+    tab.TextSize = 10
     tab.TextColor3 = Theme.Muted
     tab.ZIndex = 4
     tab.Parent = TabBar
-    Corner(tab, 9)
+    Corner(tab, 11)
     local tabScale = Instance.new("UIScale")
     tabScale.Scale = 1
     tabScale.Parent = tab
@@ -638,13 +642,14 @@ SelectPage("OVERVIEW")
 local function Label(text, height, color)
     local l = Instance.new("TextLabel")
     l.Size = UDim2.new(1, 0, 0, height or 27)
-    l.BackgroundColor3 = Theme.Panel
-    l.BackgroundTransparency = 0.07
+    l.BackgroundColor3 = Color3.fromRGB(58, 65, 82)
+    l.BackgroundTransparency = 0.03
+    l:SetAttribute("MysticsGlassLabel", true)
     l.BorderSizePixel = 0
     l.Text = text
     l.TextColor3 = color or Theme.Text
     l.Font = Enum.Font.GothamMedium
-    l.TextSize = 11
+    l.TextSize = 12
     l.TextXAlignment = Enum.TextXAlignment.Left
     l.TextYAlignment = Enum.TextYAlignment.Center
     l.TextTruncate = Enum.TextTruncate.AtEnd
@@ -657,11 +662,6 @@ local function Label(text, height, color)
     Corner(l, 10)
     local labelStroke = Stroke(l, Theme.Border, 1)
     labelStroke.Transparency = 0.55
-    local labelGradient = Gradient(l, Theme.Panel2, Theme.Panel, 90)
-    labelGradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.06),
-        NumberSequenceKeypoint.new(1, 0.18)
-    })
     local padding = Instance.new("UIPadding")
     padding.PaddingLeft = UDim.new(0, 11)
     padding.PaddingRight = UDim.new(0, 9)
@@ -706,7 +706,7 @@ local function Section(text)
     caption.Font = Enum.Font.GothamMedium
     caption.Text = "MYSTICS  /  LIVE SYSTEM"
     caption.TextColor3 = Theme.Muted
-    caption.TextSize = 7
+    caption.TextSize = 9
     caption.TextXAlignment = Enum.TextXAlignment.Left
     caption.Parent = holder
     caption:SetAttribute("MysticsTextRole", "muted")
@@ -725,28 +725,22 @@ end
 
 local function MakeButton(text, callback, color)
     local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, 0, 0, 42)
-    b.BackgroundColor3 = color or Theme.Accent
+    b.Size = UDim2.new(1, 0, 0, 44)
+    b.BackgroundColor3 = color and Color3.fromRGB(59, 66, 84) or Theme.Accent
     b.BorderSizePixel = 0
     b.Text = text
-    b.TextColor3 = Theme.Text
+    b.TextColor3 = Color3.fromRGB(253, 252, 255)
     b.Font = Enum.Font.GothamBold
-    b.TextSize = 11
+    b.TextSize = 12
     b.TextXAlignment = Enum.TextXAlignment.Left
     b.AutoButtonColor = false
     b.Parent = Content
     b:SetAttribute("MysticsButtonTone", color and "secondary" or "primary")
+    b:SetAttribute("MysticsGlassButton", true)
 
-    Corner(b, 11)
+    Corner(b, 12)
     local buttonStroke = Stroke(b, Theme.Border, 1)
     buttonStroke.Transparency = 0.34
-    local buttonGradient = Gradient(b,
-        color and Theme.Panel2 or Theme.Accent,
-        color and Theme.Panel or Theme.GradientB, 90)
-    buttonGradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.06),
-        NumberSequenceKeypoint.new(1, 0.20)
-    })
     local accentRail = Instance.new("Frame")
     accentRail.Name = "ButtonAccentRail"
     accentRail.Size = UDim2.new(0, 3, 1, -14)
@@ -757,11 +751,6 @@ local function MakeButton(text, callback, color)
     accentRail.ZIndex = 2
     accentRail.Parent = b
     Corner(accentRail, 3)
-    buttonGradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.08),
-        NumberSequenceKeypoint.new(1, 0.22)
-    })
-
     local padding = Instance.new("UIPadding")
     padding.PaddingLeft = UDim.new(0, 18)
     padding.PaddingRight = UDim.new(0, 12)
@@ -1017,7 +1006,7 @@ Section("SESSION ANALYTICS")
 local StatsDashboard = Instance.new("Frame")
 StatsDashboard.Name = "LiveStatisticsDashboard"
 StatsDashboard.Size = UDim2.new(1, 0, 0, 148)
-StatsDashboard.BackgroundColor3 = Theme.Panel2
+StatsDashboard.BackgroundColor3 = Color3.fromRGB(40, 46, 62)
 StatsDashboard.BackgroundTransparency = 0.04
 StatsDashboard.BorderSizePixel = 0
 StatsDashboard.Parent = Content
@@ -1035,14 +1024,14 @@ local function DashboardCard(order, caption, initial, accentColor)
     local card = Instance.new("Frame")
     card.Name = caption:gsub("%W", "") .. "Card"
     card.LayoutOrder = order
-    card.BackgroundColor3 = Theme.Panel
-    card.BackgroundTransparency = 0.03
+    card.BackgroundColor3 = Color3.fromRGB(57, 63, 81)
+    card.BackgroundTransparency = 0.02
     card.BorderSizePixel = 0
     card.Parent = StatsDashboard
     Corner(card, 10)
     local cardStroke = Stroke(card, Theme.Border, 1)
-    cardStroke.Transparency = 0.53
-    local cardGradient = Gradient(card, Theme.Panel2, Theme.Panel, 90)
+    cardStroke.Transparency = 0.34
+    local cardGradient = Gradient(card, VisualFX.CardTop, VisualFX.CardBottom, 90)
     cardGradient.Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 0.04),
         NumberSequenceKeypoint.new(1, 0.18)
@@ -1059,7 +1048,7 @@ local function DashboardCard(order, caption, initial, accentColor)
     title.Position = UDim2.fromOffset(15, 4)
     title.Size = UDim2.new(1, -20, 0, 13)
     title.Font = Enum.Font.GothamBold
-    title.TextSize = 8
+    title.TextSize = 9
     title.TextColor3 = Theme.Muted
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Text = caption
@@ -2596,7 +2585,7 @@ local function SetMinimized(value)
 
     if value then
         PlayUISound(UI_CLOSE_SOUND_ID, 0.32, 0.9)
-        local target = UDim2.fromOffset(410, 94)
+        local target = UDim2.fromOffset(448, 94)
         MenuSizeTween = TweenService:Create(
             Main,
             TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut),
@@ -2610,11 +2599,11 @@ local function SetMinimized(value)
         PlayUISound(UI_OPEN_SOUND_ID, 0.38, 1.08)
         PageContainer.Visible = true
         TabBar.Visible = true
-        Main.Size = UDim2.fromOffset(410, 94)
+        Main.Size = UDim2.fromOffset(448, 94)
         MenuSizeTween = TweenService:Create(
             Main,
             TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-            {Size = UDim2.fromOffset(410, 700)}
+            {Size = UDim2.fromOffset(448, 700)}
         )
         MenuSizeTween:Play()
     end
