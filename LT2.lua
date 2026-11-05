@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.19 | Self-contained utility module + opt-in legacy research tests
+-- V2.20 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.19  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.20  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.19",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.20",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1608,13 +1608,12 @@ local function previewWireArt()
 
     local segments = 0
     for _, path in ipairs(paths) do
-        for index = 1, #path do
-            local nextIndex = index == #path and 1 or index + 1
-            if #path >= 3 or index < #path then
-                local a = wireArtWorldPoint(frame, path[index], width, height)
-                local b = wireArtWorldPoint(frame, path[nextIndex], width, height)
-                local delta = b - a
-                if delta.Magnitude > 0.035 then
+        -- LT2 wires follow consecutive points; do not close cursive strokes.
+        for index = 1, #path - 1 do
+            local a = wireArtWorldPoint(frame, path[index], width, height)
+            local b = wireArtWorldPoint(frame, path[index + 1], width, height)
+            local delta = b - a
+            if delta.Magnitude > 0.035 then
                     local direction = delta.Unit
                     local up = math.abs(direction:Dot(Vector3.new(0,1,0))) > 0.96
                         and Vector3.new(1,0,0) or Vector3.new(0,1,0)
@@ -1635,11 +1634,10 @@ local function previewWireArt()
                     preview.Parent = Workspace
                     wireArtPreviewParts[#wireArtPreviewParts+1] = preview
                     segments += 1
-                end
             end
         end
     end
-    WireArtStatus.Text = "PREVIEW READY / " .. #paths .. " WIRES • " .. segments
+    WireArtStatus.Text = "PREVIEW READY / " .. #paths .. " LT2 WIRES • " .. segments
         .. " SEGMENTS\nWidth " .. width .. " / Height " .. height
         .. " / Distance " .. distance .. " studs\nMove or turn, then press UPDATE PREVIEW. Confirm uses this exact preview position."
 end
@@ -1661,7 +1659,12 @@ makeButton(toolkit, "VALIDATE WIRE ART DATA", function()
     WireArtStatus.Text = "WIRE ART / DATA VALID\n" .. #paths .. " wire strokes / " .. points .. " points"
 end, "card")
 
+local wireArtPlacing = false
 makeButton(toolkit, "CONFIRM & PLACE PREVIEW", function()
+    if wireArtPlacing then
+        WireArtStatus.Text = "WIRE ART / PLACEMENT ALREADY RUNNING"
+        return
+    end
     if not wireArtPreviewFrame or not wireArtPreviewPaths then
         WireArtStatus.Text = "WIRE ART / PREVIEW FIRST\nLoad a preset or update the preview before confirming."
         return
@@ -1672,47 +1675,65 @@ makeButton(toolkit, "CONFIRM & PLACE PREVIEW", function()
     local purchasables = replicated:FindFirstChild("Purchasables")
     local wireInfo = purchasables and purchasables:FindFirstChild("Wire", true)
     if not remote or not remote:IsA("RemoteEvent") or not wireInfo then
-        WireArtStatus.Text = "WIRE ART / LT2 WIRE PLACEMENT DATA NOT AVAILABLE"; return
+        WireArtStatus.Text = "WIRE ART / LT2 WIRE PLACEMENT DATA NOT AVAILABLE"
+        return
     end
     local character = LocalPlayer.Character
-    local wireItems = {}
-    local inventoryRoots = {}
     local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-    if backpack then inventoryRoots[#inventoryRoots+1] = backpack end
-    if character then inventoryRoots[#inventoryRoots+1] = character end
-    for _, container in ipairs(inventoryRoots) do
-        for _, item in ipairs(container:GetDescendants()) do
-            if item.Name == "Wire" and (item:IsA("Model") or item:IsA("Tool")) then
-                wireItems[#wireItems+1] = item
+    local wireItems, seen = {}, {}
+    for _, container in ipairs({backpack, character}) do
+        if container then
+            for _, item in ipairs(container:GetDescendants()) do
+                if item.Name == "Wire" and (item:IsA("Tool") or item:IsA("Model"))
+                    and not seen[item] then
+                    seen[item] = true
+                    wireItems[#wireItems+1] = item
+                end
             end
         end
     end
-    if #wireItems < #wireArtPreviewPaths then
-        WireArtStatus.Text = "WIRE ART / NEED " .. #wireArtPreviewPaths .. " WIRE ITEMS\nFOUND " .. #wireItems
-            .. ". Obtain enough Wire items, then confirm again."
-        return
-    end
     local paths, frame = wireArtPreviewPaths, wireArtPreviewFrame
     local width, height = wireArtPreviewWidth, wireArtPreviewHeight
-    WireArtStatus.Text = "WIRE ART / PLACING 0 OF " .. #paths
+    if #wireItems < #paths then
+        WireArtStatus.Text = "WIRE ART / NOT ENOUGH LT2 WIRES\nNEED: " .. #paths
+            .. "  •  FOUND: " .. #wireItems
+            .. "\nBuy or collect " .. (#paths - #wireItems) .. " more Wire items, then confirm again."
+        return
+    end
+    wireArtPlacing = true
+    WireArtStatus.Text = "WIRE ART / CONSTRUCTING WITH " .. #paths .. " LT2 WIRES"
     task.spawn(function()
-        local placed, failed = 0, 0
+        local sent, failed = 0, 0
         for index, path in ipairs(paths) do
             if State.closed then break end
             local worldPoints = {}
             for _, pair in ipairs(path) do
                 worldPoints[#worldPoints+1] = wireArtWorldPoint(frame, pair, width, height)
             end
-            local ok = pcall(function()
-                remote:FireServer(wireInfo, worldPoints, LocalPlayer, wireItems[index], true)
-            end)
-            if ok then placed += 1 else failed += 1 end
-            WireArtStatus.Text = "WIRE ART / PLACING " .. index .. " OF " .. #paths
-            task.wait(0.18)
+            if #worldPoints >= 2 then
+                -- LT2 wire placement signature used by existing scripts:
+                -- wire info, point list, local player, inventory wire item, placement flag.
+                local ok, err = pcall(function()
+                    remote:FireServer(wireInfo, worldPoints, LocalPlayer, wireItems[index], true)
+                end)
+                if ok then sent += 1 else
+                    failed += 1
+                    WireArtStatus.Text = "WIRE ART / PLACEMENT ERROR: " .. tostring(err)
+                end
+            else
+                failed += 1
+            end
+            if not State.closed then
+                WireArtStatus.Text = "WIRE ART / SENDING " .. index .. " OF " .. #paths
+                    .. "\nLT2 wires requested: " .. sent .. "  •  Errors: " .. failed
+            end
+            task.wait(0.3)
         end
+        wireArtPlacing = false
         if not State.closed then
-            WireArtStatus.Text = "WIRE ART / REQUESTS SENT: " .. placed .. "\nFAILED: " .. failed
-                .. "\nServer-confirmed placement still needs checking. Preview remains until cleared."
+            WireArtStatus.Text = "WIRE ART / PLACEMENT REQUESTS SENT: " .. sent
+                .. "\nERRORS: " .. failed
+                .. "\nCheck your plot: the game server decides whether each wire is accepted."
         end
     end)
 end, "cta")
