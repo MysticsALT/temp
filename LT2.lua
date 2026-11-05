@@ -1808,12 +1808,13 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
                 foundLog = candidate
             end
         end
-        for _, folder in ipairs({logRoot, playerModels}) do
-            if folder then
-                logListeners[#logListeners+1] = folder.ChildAdded:Connect(function(candidate)
-                    task.spawn(identifyLog, candidate)
-                end)
-            end
+        local woodFolders = {}
+        if logRoot then woodFolders[#woodFolders+1] = logRoot end
+        if playerModels then woodFolders[#woodFolders+1] = playerModels end
+        for _, folder in ipairs(woodFolders) do
+            logListeners[#logListeners+1] = folder.ChildAdded:Connect(function(candidate)
+                task.spawn(identifyLog, candidate)
+            end)
         end
         local failure
         local ok = pcall(function()
