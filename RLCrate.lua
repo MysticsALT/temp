@@ -2512,7 +2512,7 @@ local function EngineStep()
         GameCheckPaused = false
         Status.Text = Paused and "●  PAUSED" or "●  RUNNING"
         if PauseButton then
-            PauseButton.Text = Paused and "RESUME AUTOMATION" or "PAUSE AUTOMATION"
+            PauseButton.Text = Paused and "RESUME RUN" or "PAUSE RUN"
         end
         Notify("Activity check cleared — continuing recovery.")
     end
@@ -3326,8 +3326,8 @@ local KeyConnection = UIS.InputBegan:Connect(function(input, processed)
             end
 
             PauseButton.Text = Paused
-                and "RESUME AUTOMATION"
-                or "PAUSE AUTOMATION"
+                and "RESUME RUN"
+                or "PAUSE RUN"
 
             Status.Text = Paused
                 and "●  PAUSED"
