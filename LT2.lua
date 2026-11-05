@@ -1,8 +1,8 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V1.2 | Self-contained utility module + opt-in legacy research tests
+-- V1.4 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
--- Historical BLOOD coordinates are only reference data, NOT verified.
+-- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
 
 if getgenv and type(getgenv().MysticsLT2Cleanup) == "function" then
@@ -29,13 +29,13 @@ if previous then previous:Destroy() end
 local State = {
     closed = false, selectedTab = "TRAVEL", selectedPlayer = nil,
     notifications = true, sounds = true, lowMotion = false,
-    theme = "BLOOD", returnCFrame = nil,
+    theme = "MYSTICS", returnCFrame = nil,
     customLocations = {}, woodHighlights = {},
     lastTeleport = 0, minimised = false,
 }
 local Connections, Tweens, Styled = {}, {}, {}
 local Palette = {
-    BLOOD = {
+    MYSTICS = {
         base = Color3.fromRGB(35, 9, 21), surface = Color3.fromRGB(65, 18, 36),
         card = Color3.fromRGB(91, 28, 49), action = Color3.fromRGB(122, 35, 61),
         accent = Color3.fromRGB(233, 85, 121), light = Color3.fromRGB(255, 181, 198),
@@ -482,7 +482,7 @@ resizeForScreen()
 local camera = Workspace.CurrentCamera
 if camera then connect(camera:GetPropertyChangedSignal("ViewportSize"), resizeForScreen) end
 
--- Historical locations transcribed from the old BLOOD script.
+-- Historical navigation coordinates retained for convenience.
 -- They are NOT validated for the current live map.
 local HistoricalLocations = {
     {name="Wood R Us", pos=Vector3.new(265,3,57)},
@@ -545,7 +545,7 @@ local function moveTo(pos, label, restore)
 end
 local Travel = pages.TRAVEL
 section(Travel, "WAYPOINT NAVIGATOR",
-    "Historical BLOOD coordinates. Check destinations before relying on them.")
+    "Historical coordinates. Check destinations before relying on them.")
 local SearchTravel = makeInput(Travel, "Search places...", "")
 local ReturnButton = makeButton(Travel, "RETURN TO PREVIOUS POSITION", function()
     if not State.returnCFrame then
@@ -1080,15 +1080,13 @@ local function refreshWorld()
     refreshFerry()
 end
 makeButton(Utils, "REFRESH WORLD STATUS", refreshWorld, "cta")
-info(Utils, "The original MG Plays GUI linked three external scripts: JamesGui, EEVNXX GUI, and a ferry script. Their source contents could not be verified, so this module replaces only the verifiable ferry timer and dock navigation without downloading them.", 126)
+info(Utils, "Ferry and navigation tools use local replicated game information. Availability depends on the current server and game version.", 90)
 section(Utils, "RELIABILITY", "No permanent refresh loops or hidden web dependencies.")
 local UtilityState = info(Utils,
     "PLAYER LIST  /  EVENT DRIVEN\nWOOD / PLOT  /  MANUAL REFRESH\nLOADER  /  PINNED GITHUB RELEASE", 90)
 UtilityState.TextYAlignment = Enum.TextYAlignment.Center
 
--- Useful ideas extracted from recent public hubs: axe inventory,
--- money/slot visibility, and reversible client-only lighting controls.
--- These work independently of the legacy dupe experiments.
+-- Local inventory, money and lighting tools do not depend on experimental tests.
 section(Utils, "BACKPACK & SAVE READOUT",
     "Display local tool counts and currently replicated status.")
 local InventoryInfo = info(Utils, "BACKPACK  /  NOT SCANNED", 84, "text")
@@ -1371,7 +1369,7 @@ updateDupeReadout()
 local StylePage = pages.STYLE
 section(StylePage, "SIGNATURE THEME", "Choose the look of the LT2 module.")
 local themeButtons = {}
-for _, key in ipairs({"BLOOD", "OBSIDIAN", "CHRISTMAS", "HALLOWEEN"}) do
+for _, key in ipairs({"MYSTICS", "OBSIDIAN", "CHRISTMAS", "HALLOWEEN"}) do
     local selectedTheme = key
     local button = makeButton(StylePage, key, function()
         State.theme = selectedTheme
@@ -1414,8 +1412,8 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.3 • Rebuilt tools and gated legacy tests.")
-info(StylePage, "BLOOD and public script hubs were reviewed as references. Legacy dupe experiments are opt-in only, not verified, and may harm your in-game save or money. No auto-blacklisting, base wiping or third-party HTTP code.", 130)
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V1.4 • Discovery and navigation utilities.")
+info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
 --========================================================
@@ -1768,6 +1766,137 @@ makeButton(buildPage,"RESTORE ORIGINAL MOVEMENT",function()
     notify("Original movement values restored where available.")
 end,"quiet")
 
+
+--========================================================
+-- NAVIGATION & INVENTORY EXTRAS (manual, read-only scans)
+--========================================================
+section(Travel, "COORDINATE COMPASS", "Read your current coordinates or compare saved waypoints.")
+local CompassReadout = info(Travel, "POSITION / NOT REFRESHED", 118, "text")
+local currentCoordinates = nil
+makeButton(Travel, "REFRESH CURRENT COORDINATES", function()
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then CompassReadout.Text = "Character position unavailable."; return end
+    currentCoordinates = root.Position
+    local nearestName, nearestDistance = nil, math.huge
+    for _, place in ipairs(State.customLocations) do
+        local d = (place.pos - currentCoordinates).Magnitude
+        if d < nearestDistance then nearestName, nearestDistance = place.name, d end
+    end
+    local p = currentCoordinates
+    CompassReadout.Text = string.format("X %.1f  /  Y %.1f  /  Z %.1f", p.X, p.Y, p.Z)
+        .. (nearestName and ("\nNEAREST SAVED: " .. nearestName
+            .. " / " .. math.floor(nearestDistance) .. " studs") or
+            "\nNo personal waypoints saved.")
+end, "cta")
+makeButton(Travel, "COPY CURRENT COORDINATES", function()
+    if not currentCoordinates then notify("Refresh current coordinates first."); return end
+    if type(setclipboard) ~= "function" then notify("Clipboard API unavailable."); return end
+    local p = currentCoordinates
+    local value = string.format("%.2f, %.2f, %.2f", p.X, p.Y, p.Z)
+    local ok = pcall(setclipboard, value)
+    notify(ok and "Coordinates copied." or "Unable to copy coordinates.")
+end, "quiet")
+section(Travel, "WAYPOINT DISTANCE PLANNER",
+    "Compare your current position with an existing named waypoint.")
+local PlannerSearch = makeInput(Travel, "Waypoint name (exact or partial)", "")
+local PlannerOutput = info(Travel, "DISTANCE / ENTER A SAVED WAYPOINT NAME", 80, "text")
+makeButton(Travel, "CALCULATE WAYPOINT DISTANCE", function()
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not root then PlannerOutput.Text = "Character position unavailable."; return end
+    local query = string.lower(PlannerSearch.Text:match("^%s*(.-)%s*$"))
+    if query == "" then PlannerOutput.Text = "Enter a waypoint name."; return end
+    local target
+    for _, place in ipairs(State.customLocations) do
+        if string.find(string.lower(place.name), query, 1, true) then target = place; break end
+    end
+    if not target then PlannerOutput.Text = "No saved waypoint matched."; return end
+    local distance = math.floor((target.pos - root.Position).Magnitude)
+    PlannerOutput.Text = target.name .. " / " .. distance
+        .. " studs straight-line distance (not a travel ETA)."
+end, "card")
+
+section(toolkit, "WOOD TYPE CENSUS", "Summarize the visible types of wood in replicated world folders.")
+local WoodCensus = info(toolkit, "WOOD CENSUS / NOT SCANNED", 138, "text")
+makeButton(toolkit, "COUNT VISIBLE WOOD TYPES", function()
+    local counts, total, scanned = {}, 0, 0
+    for _, name in ipairs({"LogModels", "PlankModels", "WoodModels"}) do
+        local folder = Workspace:FindFirstChild(name)
+        if folder then
+            for _, obj in ipairs(folder:GetChildren()) do
+                scanned += 1
+                if scanned > 1800 then break end
+                if obj:IsA("Model") then
+                    local typeName = shortName(obj)
+                    local woodType = obj:FindFirstChild("TreeClass", true)
+                    if woodType and woodType:IsA("ValueBase") then
+                        typeName = tostring(woodType.Value)
+                    end
+                    counts[typeName] = (counts[typeName] or 0) + 1
+                    total += 1
+                end
+            end
+        end
+        if scanned > 1800 then break end
+    end
+    local entries = {}
+    for name, count in pairs(counts) do
+        entries[#entries+1] = {name=name, count=count}
+    end
+    table.sort(entries, function(a, b)
+        if a.count ~= b.count then return a.count > b.count end
+        return a.name < b.name
+    end)
+    local rows = {}
+    for i=1,math.min(6,#entries) do
+        rows[#rows+1] = entries[i].name .. " / " .. entries[i].count
+    end
+    WoodCensus.Text = "VISIBLE WOOD MODELS: " .. total
+        .. (scanned > 1800 and " / SCAN CAPPED" or "")
+        .. "\n" .. listText(rows, 6)
+end, "cta")
+
+section(toolkit, "OWNED OBJECT OVERVIEW",
+    "Counts items you own by category; ownership data must be replicated.")
+local OwnedOverview = info(toolkit, "OWNED OBJECTS / NOT SCANNED", 130, "text")
+makeButton(toolkit, "SUMMARIZE MY OBJECTS", function()
+    local results = findModels(function(obj) return ownedModel(obj) end, 350)
+    local counts = {Wood=0, Vehicle=0, Machine=0, Building=0, Other=0}
+    for _, obj in ipairs(results) do
+        local name = string.lower(shortName(obj))
+        if name:find("log",1,true) or name:find("plank",1,true)
+            or name:find("wood",1,true) then
+            counts.Wood += 1
+        elseif name:find("truck",1,true) or name:find("car",1,true)
+            or name:find("trailer",1,true) then
+            counts.Vehicle += 1
+        elseif name:find("sawmill",1,true) or name:find("conveyor",1,true) then
+            counts.Machine += 1
+        elseif name:find("wall",1,true) or name:find("blueprint",1,true)
+            or name:find("floor",1,true) then
+            counts.Building += 1
+        else
+            counts.Other += 1
+        end
+    end
+    OwnedOverview.Text = "OWNED MATCHES: " .. #results
+        .. (#results >= 350 and " / CAPPED" or "") ..
+        "\nWOOD " .. counts.Wood .. "  /  VEHICLES " .. counts.Vehicle
+        .. "\nMACHINES " .. counts.Machine .. "  /  BUILD " .. counts.Building
+        .. "\nOTHER " .. counts.Other
+end, "card")
+
+section(buildPage, "LOADOUT NOTES", "Keep a short personal note for your next build or shopping trip.")
+local NotesField = makeInput(buildPage, "Project notes (max 180 characters)", "")
+makeButton(buildPage, "SAVE NOTE THIS SESSION", function()
+    State.buildNote = string.sub(NotesField.Text, 1, 180)
+    notify("Build note saved for this session.")
+end, "card")
+makeButton(buildPage, "RESTORE SAVED NOTE", function()
+    NotesField.Text = State.buildNote or ""
+    notify(State.buildNote and "Saved note restored." or "No build note saved.")
+end, "quiet")
+
 section(StylePage,"SAVE SETTINGS & WAYPOINTS","Optional executor file API; session-only fallback.")
 makeButton(StylePage,"SAVE MY PREFERENCES",storeSettings,"cta")
 makeButton(StylePage,"LOAD SAVED PREFERENCES",loadSettings,"card")
@@ -1781,4 +1910,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 module ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v1.4 ready. Historical waypoints are unverified.")

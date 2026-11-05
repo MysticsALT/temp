@@ -115,7 +115,7 @@ local Themes = {
     },
 
     {
-        Name = "BLOOD RED",
+        Name = "CRIMSON",
         Icon = "◆",
         Tag = "THE RUBY COLLECTION",
         Decoration = {"◆", "♦", "✦"},
@@ -983,7 +983,7 @@ VisualFX.StyleActionButton = function(button)
     local border
     local alpha = 0.23
     if variant == "primary" then
-        fill = Theme.Panel2:Lerp(Theme.Accent, Theme.Name == "BLOOD RED" and 0.60 or 0.30)
+        fill = Theme.Panel2:Lerp(Theme.Accent, Theme.Name == "CRIMSON" and 0.60 or 0.30)
         border = Theme.Accent2
         alpha = 0.04
     elseif variant == "danger" then
@@ -2763,7 +2763,7 @@ local SoundButton
 -- THEME ATMOSPHERE
 -- Christmas: drifting/falling snow.
 -- Halloween: bats gliding across the panel.
--- Blood Red: rising crimson embers and glowing droplets.
+-- Crimson: rising crimson embers and glowing droplets.
 --========================================================
 
 local function StartThemeAtmosphere()
@@ -2778,7 +2778,7 @@ local function StartThemeAtmosphere()
         OBSIDIAN = {"*", ".", "+", "o"},
         CHRISTMAS = {"❄", "❅", "✦"},
         HALLOWEEN = {"🎃", "*", "+"},
-        ["BLOOD RED"] = {"◆", "●", "✦"}
+        ["CRIMSON"] = {"◆", "●", "✦"}
     }
 
     local symbols = particleSets[Theme.Name]
@@ -2789,7 +2789,7 @@ local function StartThemeAtmosphere()
             local symbol = symbols[math.random(1, #symbols)]
             local particle = Instance.new("TextLabel")
             local isPumpkin = Theme.Name == "HALLOWEEN"
-            local isBlood = Theme.Name == "BLOOD RED"
+            local isCrimson = Theme.Name == "CRIMSON"
             local isObsidian = Theme.Name == "OBSIDIAN"
             local isChristmas = Theme.Name == "CHRISTMAS"
 
@@ -2804,14 +2804,14 @@ local function StartThemeAtmosphere()
             particle.Font = Enum.Font.GothamBold
             particle.Text = symbol
             particle.TextSize = isPumpkin and math.random(17, 25) or math.random(11, isObsidian and 18 or 21)
-            particle.TextTransparency = isObsidian and 0.48 or (isBlood and 0.22 or 0.3)
+            particle.TextTransparency = isObsidian and 0.48 or (isCrimson and 0.22 or 0.3)
             particle.ZIndex = 1
 
             if isChristmas then
                 particle.TextColor3 = Color3.fromRGB(220, 245, 255)
             elseif isPumpkin then
                 particle.TextColor3 = Color3.fromRGB(207, 174, 232)
-            elseif isBlood then
+            elseif isCrimson then
                 particle.TextColor3 = Color3.fromRGB(225, math.random(25, 65), math.random(45, 80))
             elseif isObsidian then
                 particle.TextColor3 = Color3.fromRGB(170, 196, 225)
@@ -2826,7 +2826,7 @@ local function StartThemeAtmosphere()
                 endX = fromLeft and 1.08 or -0.08
                 startY = math.random(12, 88) / 100
                 endY = math.clamp(startY + math.random(-18, 18) / 100, 0.08, 0.92)
-            elseif isBlood then
+            elseif isCrimson then
                 startX, startY = math.random(5, 95) / 100, 1.08
                 endX = math.clamp(startX + math.random(-12, 12) / 100, 0.03, 0.97)
                 endY = -0.08
@@ -2866,9 +2866,9 @@ local function ApplyTheme()
     StartThemeAtmosphere()
     Subtitle.Text = Theme.Tag
 
-    -- Blood Red uses luminous crimson glass, not the neutral slate shared
+    -- Crimson uses luminous crimson glass, not the neutral slate shared
     -- by the other themes. Keep white lettering for contrast.
-    if Theme.Name == "BLOOD RED" then
+    if Theme.Name == "CRIMSON" then
         VisualFX.GlassTop = Color3.fromRGB(132, 43, 68)
         VisualFX.GlassBottom = Color3.fromRGB(88, 20, 40)
         VisualFX.CardTop = Color3.fromRGB(146, 55, 80)
@@ -2894,9 +2894,9 @@ local function ApplyTheme()
     Header.BackgroundColor3 = Theme.Panel
     VisualFX.MainAura.BackgroundColor3 = Theme.Accent2
     VisualFX.HeaderRule.BackgroundColor3 = Theme.Accent2
-    VisualFX.TabShell.BackgroundColor3 = Theme.Name == "BLOOD RED"
+    VisualFX.TabShell.BackgroundColor3 = Theme.Name == "CRIMSON"
         and Color3.fromRGB(96, 24, 48) or Color3.fromRGB(88, 100, 121)
-    VisualFX.ContentShell.BackgroundColor3 = Theme.Name == "BLOOD RED"
+    VisualFX.ContentShell.BackgroundColor3 = Theme.Name == "CRIMSON"
         and Color3.fromRGB(82, 18, 39) or Color3.fromRGB(82, 94, 115)
     VisualFX.ContentSweep.BackgroundColor3 = Theme.Accent2
     VisualFX.EmblemStroke.Color = Theme.Accent2
@@ -2909,7 +2909,7 @@ local function ApplyTheme()
     Decoration.TextColor3 = Theme.Accent2
 
     MainStroke.Color = Theme.Border
-    MainGradient.Color = Theme.Name == "BLOOD RED"
+    MainGradient.Color = Theme.Name == "CRIMSON"
         and ColorSequence.new(
             Color3.fromRGB(102, 22, 46),
             Color3.fromRGB(42, 9, 22)
