@@ -1532,21 +1532,51 @@ section(toolkit, "TREE FINDER", "Find replicated trees; no harvesting or server 
 local TreeSearch = makeInput(toolkit, "Tree name filter (e.g. Oak, Birch)", "")
 local TreeResult = info(toolkit, "TREE FINDER  /  READY", 116, "text")
 local treeCandidates = {}
+-- TreeRegions is sometimes a container, but LT2 also uses multiple
+-- Workspace.TreeRegion instances. Inspect both layouts without deep scans.
+local function scanTreeRegions()
+    local roots = {}
+    local plural = Workspace:FindFirstChild("TreeRegions")
+    if plural then
+        for _, region in ipairs(plural:GetChildren()) do
+            if region:IsA("Folder") or region:IsA("Model") then
+                roots[#roots+1] = region
+            end
+        end
+    end
+    for _, region in ipairs(Workspace:GetChildren()) do
+        if region.Name == "TreeRegion" then
+            roots[#roots+1] = region
+        end
+    end
+    return roots
+end
 makeButton(toolkit, "SCAN TREES NEAR ME", function()
     clearToolkitHighlights()
     treeCandidates = {}
-    local folder = Workspace:FindFirstChild("TreeRegions")
-    if not folder then TreeResult.Text="TreeRegions not replicated; tree scan unavailable."; return end
+    local regions = scanTreeRegions()
+    if #regions == 0 then
+        TreeResult.Text = "No tree regions found in Workspace.\nConfirm LT2 is fully loaded, then scan again."
+        return
+    end
     local query = string.lower(TreeSearch.Text)
     local seen = 0
-    for _, region in ipairs(folder:GetChildren()) do
+    for _, region in ipairs(regions) do
         for _, tree in ipairs(region:GetChildren()) do
             seen += 1
             if seen > 1800 or #treeCandidates >= 100 then break end
-            local species = shortName(tree)
-            local pos = objectPosition(tree)
-            if pos and (query == "" or string.find(string.lower(species),query,1,true)) then
-                treeCandidates[#treeCandidates+1] = {obj=tree,name=species,pos=pos,dist=safeDistance(pos) or 999999}
+            if tree:IsA("Model") then
+                local class = tree:FindFirstChild("TreeClass")
+                local species = class and class:IsA("ValueBase")
+                    and tostring(class.Value) or shortName(tree)
+                local section = tree:FindFirstChild("WoodSection")
+                local pos = section and section:IsA("BasePart") and section.Position
+                    or objectPosition(tree)
+                if pos and (query == "" or string.find(string.lower(species),query,1,true)) then
+                    treeCandidates[#treeCandidates+1] = {
+                        obj=tree, name=species, pos=pos, dist=safeDistance(pos) or 999999
+                    }
+                end
             end
         end
         if seen > 1800 or #treeCandidates >= 100 then break end
@@ -1557,7 +1587,8 @@ makeButton(toolkit, "SCAN TREES NEAR ME", function()
         local t=treeCandidates[i]
         names[#names+1]=t.name.." / "..t.dist.." studs"
     end
-    TreeResult.Text = "MATCHES: "..#treeCandidates.." (scan capped)\n"..listText(names,4)
+    TreeResult.Text = "MATCHES: "..#treeCandidates.." / REGIONS: "..#regions
+        ..(seen > 1800 and " / SCAN CAPPED" or "").."\n"..listText(names,4)
 end, "cta")
 makeButton(toolkit, "HIGHLIGHT 12 NEAREST MATCHES", function()
     clearToolkitHighlights()
