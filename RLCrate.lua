@@ -119,16 +119,16 @@ local Themes = {
         Icon = "◆",
         Tag = "THE RUBY COLLECTION",
         Decoration = {"◆", "♦", "✦"},
-        Background = Color3.fromRGB(62, 14, 31),
-        Panel = Color3.fromRGB(113, 29, 53),
-        Panel2 = Color3.fromRGB(156, 41, 72),
+        Background = Color3.fromRGB(46, 10, 22),
+        Panel = Color3.fromRGB(86, 20, 40),
+        Panel2 = Color3.fromRGB(122, 30, 55),
         Text = Color3.fromRGB(255, 249, 251),
-        Muted = Color3.fromRGB(255, 221, 231),
-        Accent = Color3.fromRGB(231, 53, 86),
-        Accent2 = Color3.fromRGB(255, 174, 190),
-        Border = Color3.fromRGB(222, 102, 130),
-        GradientA = Color3.fromRGB(193, 43, 75),
-        GradientB = Color3.fromRGB(62, 14, 31)
+        Muted = Color3.fromRGB(244, 219, 228),
+        Accent = Color3.fromRGB(214, 46, 79),
+        Accent2 = Color3.fromRGB(255, 164, 184),
+        Border = Color3.fromRGB(197, 84, 114),
+        GradientA = Color3.fromRGB(150, 28, 58),
+        GradientB = Color3.fromRGB(46, 10, 22)
     },
 
     {
@@ -2487,15 +2487,15 @@ local function ApplyTheme()
     -- Blood Red uses luminous crimson glass, not the neutral slate shared
     -- by the other themes. Keep white lettering for contrast.
     if Theme.Name == "BLOOD RED" then
-        VisualFX.GlassTop = Color3.fromRGB(163, 59, 87)
-        VisualFX.GlassBottom = Color3.fromRGB(116, 32, 57)
-        VisualFX.CardTop = Color3.fromRGB(177, 72, 99)
-        VisualFX.CardBottom = Color3.fromRGB(138, 44, 72)
-        VisualFX.LabelBackground = Color3.fromRGB(157, 64, 91)
-        VisualFX.SecondaryBackground = Color3.fromRGB(161, 50, 78)
-        VisualFX.SectionBackground = Color3.fromRGB(132, 38, 66)
-        VisualFX.DashboardBackground = Color3.fromRGB(119, 35, 62)
-        VisualFX.StatCardBackground = Color3.fromRGB(149, 52, 82)
+        VisualFX.GlassTop = Color3.fromRGB(132, 43, 68)
+        VisualFX.GlassBottom = Color3.fromRGB(88, 20, 40)
+        VisualFX.CardTop = Color3.fromRGB(146, 55, 80)
+        VisualFX.CardBottom = Color3.fromRGB(104, 28, 50)
+        VisualFX.LabelBackground = Color3.fromRGB(122, 39, 62)
+        VisualFX.SecondaryBackground = Color3.fromRGB(128, 33, 56)
+        VisualFX.SectionBackground = Color3.fromRGB(102, 26, 48)
+        VisualFX.DashboardBackground = Color3.fromRGB(92, 23, 43)
+        VisualFX.StatCardBackground = Color3.fromRGB(114, 31, 54)
     else
         VisualFX.GlassTop = Color3.fromRGB(104, 118, 141)
         VisualFX.GlassBottom = Color3.fromRGB(79, 91, 112)
@@ -2513,9 +2513,9 @@ local function ApplyTheme()
     VisualFX.MainAura.BackgroundColor3 = Theme.Accent2
     VisualFX.HeaderRule.BackgroundColor3 = Theme.Accent2
     VisualFX.TabShell.BackgroundColor3 = Theme.Name == "BLOOD RED"
-        and Color3.fromRGB(121, 35, 63) or Color3.fromRGB(88, 100, 121)
+        and Color3.fromRGB(96, 24, 48) or Color3.fromRGB(88, 100, 121)
     VisualFX.ContentShell.BackgroundColor3 = Theme.Name == "BLOOD RED"
-        and Color3.fromRGB(109, 31, 55) or Color3.fromRGB(82, 94, 115)
+        and Color3.fromRGB(82, 18, 39) or Color3.fromRGB(82, 94, 115)
     VisualFX.ContentSweep.BackgroundColor3 = Theme.Accent2
     VisualFX.EmblemStroke.Color = Theme.Accent2
     VisualFX.EmblemGradient.Color = ColorSequence.new(Theme.Accent, Theme.Panel2)
@@ -2529,8 +2529,8 @@ local function ApplyTheme()
     MainStroke.Color = Theme.Border
     MainGradient.Color = Theme.Name == "BLOOD RED"
         and ColorSequence.new(
-            Color3.fromRGB(129, 31, 59),
-            Color3.fromRGB(65, 16, 35)
+            Color3.fromRGB(102, 22, 46),
+            Color3.fromRGB(42, 9, 22)
         )
         or ColorSequence.new(
             Theme.Panel:Lerp(Color3.fromRGB(62, 72, 91), 0.58),
