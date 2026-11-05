@@ -364,7 +364,7 @@ for index, name in ipairs(TAB_NAMES) do
     end, "quiet", 32)
     tab.Name = name .. "Tab"
     tab.LayoutOrder = index
-    tab.Size = UDim2.fromOffset(51, 32)
+    tab.Size = UDim2.fromOffset(50, 32)
     tab.TextSize = 8
     tab.TextXAlignment = Enum.TextXAlignment.Center
     tabs[name] = tab
@@ -1571,7 +1571,7 @@ makeButton(toolkit, "HIGHLIGHT 12 NEAREST MATCHES", function()
             h.FillTransparency=0.85
             h.OutlineColor=theme().accent
             h.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
-            h.Parent=Gui
+            h.Parent=Workspace
             toolkitHighlights[#toolkitHighlights+1]=h
         end
     end
