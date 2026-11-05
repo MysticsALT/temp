@@ -21,9 +21,11 @@ pcall(function()
     end
 end)
 
-local ExistingHub = HubParent:FindFirstChild("MysticsHub_Main")
-if ExistingHub then
-    ExistingHub:Destroy()
+-- Clear previous versions from both supported GUI roots when relaunching.
+-- This avoids showing the old launcher if an earlier session used another root.
+for _, parent in ipairs({PlayerGui, HubParent}) do
+    local previousHub = parent:FindFirstChild("MysticsHub_Main")
+    if previousHub then previousHub:Destroy() end
 end
 
 local HubGui = Instance.new("ScreenGui")
@@ -268,7 +270,7 @@ HubVisual.Kicker.BackgroundTransparency = 1
 HubVisual.Kicker.Position = UDim2.new(0, 28, 0, 15)
 HubVisual.Kicker.Size = UDim2.new(1, -56, 0, 12)
 HubVisual.Kicker.Font = Enum.Font.GothamBold
-HubVisual.Kicker.Text = "PREMIUM EXPERIENCE HUB   /   V3.0"
+HubVisual.Kicker.Text = "MYSTICS V3.2   /   PIN-GATED LAUNCHER"
 HubVisual.Kicker.TextColor3 = Color3.fromRGB(218, 104, 129)
 HubVisual.Kicker.TextSize = 8
 HubVisual.Kicker.TextXAlignment = Enum.TextXAlignment.Left
@@ -396,8 +398,8 @@ local function CreateHubButton(label, order, isPrimary, callback)
     local buttonTitle = Instance.new("TextLabel")
     buttonTitle.Name = "ButtonTitle"
     buttonTitle.BackgroundTransparency = 1
-    buttonTitle.Position = UDim2.fromOffset(60, 0)
-    buttonTitle.Size = UDim2.new(1, -154, 1, 0)
+    buttonTitle.Position = UDim2.fromOffset(72, 0)
+    buttonTitle.Size = UDim2.new(1, -174, 1, 0)
     buttonTitle.Font = Enum.Font.GothamSemibold
     buttonTitle.Text = label
     buttonTitle.TextColor3 = isPrimary
@@ -578,7 +580,7 @@ end
 
 LaunchRLCrateUnboxing = function()
     -- Immutable commit pin: main-branch changes cannot silently alter this module.
-    local moduleCommit = "30b96f2e3942ec01461efdb574b926bb633f534a"
+    local moduleCommit = "80be67ca08ecf6c44fc66163f99eb891c89a6ef7"
     local moduleUrl = "https://raw.githubusercontent.com/MysticsALT/temp/" .. moduleCommit .. "/RLCrate.lua"
 
     if type(loadstring) ~= "function" then
@@ -626,7 +628,13 @@ Footer.Parent = Background
 
 CloseButton.Activated:Connect(CloseHub)
 
--- The hub stays inaccessible until the local four-digit access code is entered.
+-- Present ONLY the PIN screen until unlocked, so the menu cannot be
+-- interacted with or accidentally be mistaken for an ungated version.
+Header.Visible = false
+List.Visible = false
+Footer.Visible = false
+HubVisual.Ambient.Visible = false
+
 -- This is a client-side UI lock, not a secure server-side authentication system.
 local AccessOverlay = Instance.new("Frame")
 AccessOverlay.Name = "AccessGate"
@@ -698,8 +706,10 @@ AccessInput.BorderSizePixel = 0
 AccessInput.ClearTextOnFocus = false
 AccessInput.MultiLine = false
 AccessInput.Text = ""
-AccessInput.PlaceholderText = ""
-AccessInput.TextTransparency = 1
+AccessInput.PlaceholderText = "ENTER 4-DIGIT PIN"
+AccessInput.PlaceholderColor3 = Color3.fromRGB(185, 127, 150)
+AccessInput.TextColor3 = Color3.fromRGB(255, 223, 235)
+AccessInput.TextTransparency = 0
 AccessInput.TextSize = 18
 AccessInput.Font = Enum.Font.GothamBold
 AccessInput.TextXAlignment = Enum.TextXAlignment.Center
@@ -719,6 +729,7 @@ AccessMask.TextSize = 21
 AccessMask.TextColor3 = Color3.fromRGB(255, 207, 221)
 AccessMask.ZIndex = 44
 AccessMask.Active = false
+AccessMask.Visible = false
 AccessMask.Parent = AccessPanel
 
 local AccessError = Instance.new("TextLabel")
@@ -780,6 +791,10 @@ local function AttemptUnlock()
     if AccessInput.Text == "4587" then
         HubUnlocked = true
         PlayHubSound(HUB_CLICK_SOUND_ID, 0.25, 1.05)
+        Header.Visible = true
+        List.Visible = true
+        Footer.Visible = true
+        HubVisual.Ambient.Visible = true
         AccessOverlay:Destroy()
     else
         AccessInput.Text = ""
@@ -797,6 +812,7 @@ UnlockButton.Activated:Connect(AttemptUnlock)
 AccessInput.FocusLost:Connect(function(enterPressed)
     if enterPressed then AttemptUnlock() end
 end)
+-- The gate remains visible until the correct PIN is entered; no auto-unlock.
 
 PlayHubSound(HUB_OPEN_SOUND_ID, 0.32, 1.04)
 HubOpenTween:Play()
