@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.7 | Self-contained utility module + opt-in legacy research tests
+-- V2.8 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -257,7 +257,7 @@ Header.Active = true
 stroke(Header)
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -128, 0, 32), UDim2.fromOffset(19, 13), 18, "text", true)
-makeLabel(Header, "V2.7  •  LT2 TOOLKIT + LEGACY TESTS",
+makeLabel(Header, "V2.8  •  LT2 TOOLKIT + LEGACY TESTS",
     UDim2.new(1, -128, 0, 21), UDim2.fromOffset(20, 47), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -38, 0, 2), UDim2.new(0, 19, 1, -12), "accent", 1)
@@ -1415,7 +1415,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.7 • Discovery and cutting utilities.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.8 • Discovery and cutting utilities.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1556,13 +1556,23 @@ local function localTreeRegions()
     return roots
 end
 local function getCutSection(tree)
-    local trunk = tree:FindFirstChild("WoodSection")
-    if trunk and trunk:IsA("BasePart") then return trunk end
-    for _, part in ipairs(tree:GetChildren()) do
-        local id = part:IsA("BasePart") and part:FindFirstChild("ID")
-        if id and id:IsA("ValueBase") and tonumber(id.Value) == 1 then return part end
+    -- ID 1 is the base cut section in the replicated tree model.
+    -- Prefer it over WoodSection so cutting begins at ground level.
+    local baseSection
+    for _, part in ipairs(tree:GetDescendants()) do
+        if part:IsA("BasePart") then
+            local id = part:FindFirstChild("ID")
+            if id and id:IsA("ValueBase") and tonumber(id.Value) == 1 then
+                if not baseSection or part.Position.Y < baseSection.Position.Y then
+                    baseSection = part
+                end
+            end
+        end
     end
-    return objectPosition(tree) and (tree.PrimaryPart or tree:FindFirstChildWhichIsA("BasePart")) or nil
+    if baseSection then return baseSection end
+    local trunk = tree:FindFirstChild("WoodSection", true)
+    if trunk and trunk:IsA("BasePart") then return trunk end
+    return objectPosition(tree) and (tree.PrimaryPart or tree:FindFirstChildWhichIsA("BasePart", true)) or nil
 end
 -- Use the same region/section discovery as AUTO WOOD CUTTING.
 local function showTreeScan()
@@ -1879,7 +1889,7 @@ local HarvestStartButton = makeButton(toolkit, "HARVEST NEAREST HIGHLIGHTED TREE
             task.wait(0.6)
             local movedRoot = character:FindFirstChild("HumanoidRootPart")
             if not active() or not movedRoot
-                or (movedRoot.Position - section.Position).Magnitude > 18 then
+                or (movedRoot.Position - section.Position).Magnitude > 35 then
                 failure = "TELEPORT DID NOT REACH TREE"
                 return
             end
@@ -2583,4 +2593,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.7 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v2.8 ready. Historical waypoints are unverified.")
