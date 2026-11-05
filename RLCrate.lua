@@ -842,6 +842,12 @@ task.defer(function()
         VisualFX.SlideToTab(CurrentPageName)
     end
 end)
+-- Let the entrance UIScale complete before the final indicator alignment.
+task.delay(0.85, function()
+    if not Destroyed and VisualFX.TabSlider.Parent then
+        VisualFX.SlideToTab(CurrentPageName)
+    end
+end)
 
 SelectPage("OVERVIEW")
 
@@ -1396,6 +1402,24 @@ local function DashboardCard(order, caption, initial, accentColor)
     Corner(card, 10)
     local cardStroke = Stroke(card, Theme.Border, 1)
     cardStroke.Transparency = 0.20
+    local cardScale = Instance.new("UIScale")
+    cardScale.Scale = 1
+    cardScale.Parent = card
+    card.Active = true
+    card.MouseEnter:Connect(function()
+        TweenService:Create(cardScale,
+            TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Scale = 1.018}
+        ):Play()
+        TweenService:Create(cardStroke, TweenInfo.new(0.16), {Transparency = 0.02}):Play()
+    end)
+    card.MouseLeave:Connect(function()
+        TweenService:Create(cardScale,
+            TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Scale = 1}
+        ):Play()
+        TweenService:Create(cardStroke, TweenInfo.new(0.18), {Transparency = 0.20}):Play()
+    end)
     local cardGradient = Gradient(card, VisualFX.CardTop, VisualFX.CardBottom, 90)
     cardGradient.Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 0.04),
@@ -3321,6 +3345,15 @@ local function Cleanup()
     pcall(function() AmbientGradientTween:Cancel() end)
     pcall(function() HeaderGradientTween:Cancel() end)
     pcall(function() BorderPulseTween:Cancel() end)
+    pcall(function() if VisualFX.BorderSweepTween then VisualFX.BorderSweepTween:Cancel() end end)
+    -- Stat count-up values are not parented to the GUI, so dispose of them
+    -- explicitly when exiting or relaunching.
+    for label, record in pairs(VisualFX.StatAnimations or {}) do
+        if record.tween then pcall(function() record.tween:Cancel() end) end
+        if record.conn then record.conn:Disconnect() end
+        if record.value then record.value:Destroy() end
+        VisualFX.StatAnimations[label] = nil
+    end
     pcall(function() if MenuSizeTween then MenuSizeTween:Cancel() end end)
 
     if KeyConnection then
