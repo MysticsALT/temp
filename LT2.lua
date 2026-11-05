@@ -825,14 +825,13 @@ HighlightButton = makeButton(Wood, "OWNED WOOD OUTLINES: OFF", function()
     end
 end, "card")
 info(Wood, "Outlines are client-side only. If owned logs lose ownership or the game stops replicating a model, they cannot be counted reliably.", 82)
-section(Wood, "WOOD DEBUGGER", "Point at a log or plank to inspect how its ownership is stored.")
-local AimedWoodInfo = info(Wood, "AIMED MODEL  /  NOT INSPECTED", 71)
-makeButton(Wood, "INSPECT WOOD UNDER CURSOR", function()
-    local mouse = LocalPlayer:GetMouse()
-    local target = mouse and mouse.Target
+section(Wood, "WOOD DEBUGGER", "Arm the picker, then click a log or plank in the world.")
+local AimedWoodInfo = info(Wood, "AIMED MODEL  /  NOT INSPECTED", 72)
+local WoodPickActive = false
+local woodMouse = LocalPlayer:GetMouse()
+local function inspectWoodTarget(target)
     if not target then
-        AimedWoodInfo.Text = "No visible part was targeted. Try aiming directly at a log or plank."
-        notify("No model found under your pointer.")
+        AimedWoodInfo.Text = "No visible part targeted. Aim at a log or plank and retry."
         return
     end
     local candidate = target
@@ -842,7 +841,7 @@ makeButton(Wood, "INSPECT WOOD UNDER CURSOR", function()
         candidate = candidate.Parent
     end
     if not candidate or candidate == Workspace then
-        AimedWoodInfo.Text = "Target is not in a recognised wood-model folder: " ..
+        AimedWoodInfo.Text = "Target not in recognised wood folders: " ..
             string.sub(target.Name, 1, 35)
         return
     end
@@ -851,8 +850,24 @@ makeButton(Wood, "INSPECT WOOD UNDER CURSOR", function()
         (ownerIsLocal(value) and "OWNED BY YOU" or "OTHER/UNASSIGNED")
     AimedWoodInfo.Text = "MODEL: " .. string.sub(candidate.Name, 1, 35) ..
         "\nFOLDER: " .. candidate.Parent.Name .. "   /   " .. status
-    notify("Wood target inspected: " .. status)
+    notify("Wood model: " .. status)
+end
+local WoodPickButton
+WoodPickButton = makeButton(Wood, "PICK WOOD MODEL", function()
+    WoodPickActive = not WoodPickActive
+    WoodPickButton.Text = WoodPickActive and "CANCEL WOOD PICK" or "PICK WOOD MODEL"
+    if WoodPickActive then
+        AimedWoodInfo.Text = "Picker active. Click on a log or plank in the world."
+    end
 end, "quiet")
+connect(woodMouse.Button1Down, function()
+    if not WoodPickActive or State.closed then return end
+    -- A click on the 3D world supplies the correct target; toggling the
+    -- button itself does not re-use the button's screen position.
+    WoodPickActive = false
+    WoodPickButton.Text = "PICK WOOD MODEL"
+    inspectWoodTarget(woodMouse.Target)
+end)
 -- Plot inspection is deliberately read-only except for optional local TP.
 local Plots = pages.PLOTS
 section(Plots, "PLOT INSPECTOR", "Ownership is checked before any plot destination is offered.")
