@@ -697,7 +697,66 @@ AccessPanel.ZIndex = 41
 AccessPanel.Parent = AccessOverlay
 AddCorner(AccessPanel, 18)
 local AccessStroke = AddStroke(AccessPanel, Color3.fromRGB(231, 86, 127), 1.5, 0.14)
-AddGradient(AccessPanel, Color3.fromRGB(107, 25, 53), Color3.fromRGB(46, 12, 29), 90)
+AddGradient(AccessPanel, Color3.fromRGB(126, 31, 64), Color3.fromRGB(54, 15, 34), 90)
+AccessPanel.ClipsDescendants = true
+
+local AccessScale = Instance.new("UIScale")
+AccessScale.Scale = 0.94
+AccessScale.Parent = AccessPanel
+TweenService:Create(AccessScale,
+    TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    {Scale = 1}
+):Play()
+TweenService:Create(AccessStroke,
+    TweenInfo.new(3.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+    {Transparency = 0.52}
+):Play()
+
+-- A soft moving highlight across the panel's upper edge.
+local AccessLine = Instance.new("Frame")
+AccessLine.Name = "AccessLightSweep"
+AccessLine.Position = UDim2.fromOffset(20, 8)
+AccessLine.Size = UDim2.new(1, -40, 0, 2)
+AccessLine.BackgroundColor3 = Color3.fromRGB(255, 146, 186)
+AccessLine.BackgroundTransparency = 0.12
+AccessLine.BorderSizePixel = 0
+AccessLine.ZIndex = 41
+AccessLine.Parent = AccessPanel
+AddCorner(AccessLine, 2)
+local AccessLineGradient = Instance.new("UIGradient")
+AccessLineGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(0.5, 0.08),
+    NumberSequenceKeypoint.new(1, 1)
+})
+AccessLineGradient.Offset = Vector2.new(-1, 0)
+AccessLineGradient.Parent = AccessLine
+TweenService:Create(AccessLineGradient,
+    TweenInfo.new(5.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1),
+    {Offset = Vector2.new(1, 0)}
+):Play()
+
+-- Monogram uses a text glyph instead of an external image asset.
+local AccessEmblem = Instance.new("Frame")
+AccessEmblem.Name = "AccessEmblem"
+AccessEmblem.Position = UDim2.new(1, -59, 0, 22)
+AccessEmblem.Size = UDim2.fromOffset(34, 34)
+AccessEmblem.BackgroundColor3 = Color3.fromRGB(136, 34, 69)
+AccessEmblem.BackgroundTransparency = 0.25
+AccessEmblem.BorderSizePixel = 0
+AccessEmblem.ZIndex = 42
+AccessEmblem.Parent = AccessPanel
+AddCorner(AccessEmblem, 99)
+AddStroke(AccessEmblem, Color3.fromRGB(245, 133, 172), 1, 0.37)
+local AccessLetter = Instance.new("TextLabel")
+AccessLetter.BackgroundTransparency = 1
+AccessLetter.Size = UDim2.fromScale(1, 1)
+AccessLetter.Font = Enum.Font.GothamBlack
+AccessLetter.Text = "M"
+AccessLetter.TextSize = 17
+AccessLetter.TextColor3 = Color3.fromRGB(255, 215, 229)
+AccessLetter.ZIndex = 43
+AccessLetter.Parent = AccessEmblem
 
 local AccessKicker = Instance.new("TextLabel")
 AccessKicker.BackgroundTransparency = 1
