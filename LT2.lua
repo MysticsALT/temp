@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.20 | Self-contained utility module + opt-in legacy research tests
+-- V2.21 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.20  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.21  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.20",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.21",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1673,29 +1673,55 @@ makeButton(toolkit, "CONFIRM & PLACE PREVIEW", function()
     local placeFolder = replicated:FindFirstChild("PlaceStructure")
     local remote = placeFolder and placeFolder:FindFirstChild("ClientPlacedWire")
     local purchasables = replicated:FindFirstChild("Purchasables")
-    local wireInfo = purchasables and purchasables:FindFirstChild("Wire", true)
+    local wireFolder = purchasables and purchasables:FindFirstChild("WireObjects")
+    local wireInfo = wireFolder and wireFolder:FindFirstChild("Wire")
+    if not wireInfo and purchasables then
+        wireInfo = purchasables:FindFirstChild("Wire", true)
+    end
     if not remote or not remote:IsA("RemoteEvent") or not wireInfo then
         WireArtStatus.Text = "WIRE ART / LT2 WIRE PLACEMENT DATA NOT AVAILABLE"
         return
     end
+
+    -- LT2 purchased items are normally spawned under Workspace.PlayerModels,
+    -- not inside Backpack/Character. Match only models owned by this player.
     local character = LocalPlayer.Character
     local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local playerModels = Workspace:FindFirstChild("PlayerModels")
     local wireItems, seen = {}, {}
-    for _, container in ipairs({backpack, character}) do
-        if container then
-            for _, item in ipairs(container:GetDescendants()) do
-                if item.Name == "Wire" and (item:IsA("Tool") or item:IsA("Model"))
-                    and not seen[item] then
-                    seen[item] = true
-                    wireItems[#wireItems+1] = item
-                end
+    local function isOwnedWire(item)
+        if not item:IsA("Model") and not item:IsA("Tool") then return false end
+        local owner = item:FindFirstChild("Owner")
+        if not owner or owner.Value ~= LocalPlayer then return false end
+        local purchasedName = item:FindFirstChild("PurchasedBoxItemName")
+        local itemName = item:FindFirstChild("ItemName")
+        return item.Name == "Wire"
+            or (purchasedName and tostring(purchasedName.Value) == "Wire")
+            or (itemName and tostring(itemName.Value) == "Wire")
+    end
+    local function collectOwnedWires(container)
+        if not container then return end
+        for _, item in ipairs(container:GetChildren()) do
+            if isOwnedWire(item) and not seen[item] then
+                seen[item] = true
+                wireItems[#wireItems+1] = item
+            end
+        end
+        -- Also allow a Wire tool nested in an inventory container.
+        for _, item in ipairs(container:GetDescendants()) do
+            if item ~= container and isOwnedWire(item) and not seen[item] then
+                seen[item] = true
+                wireItems[#wireItems+1] = item
             end
         end
     end
+    collectOwnedWires(playerModels)
+    collectOwnedWires(backpack)
+    collectOwnedWires(character)
     local paths, frame = wireArtPreviewPaths, wireArtPreviewFrame
     local width, height = wireArtPreviewWidth, wireArtPreviewHeight
     if #wireItems < #paths then
-        WireArtStatus.Text = "WIRE ART / NOT ENOUGH LT2 WIRES\nNEED: " .. #paths
+        WireArtStatus.Text = "WIRE ART / NOT ENOUGH OWNED LT2 WIRES\nNEED: " .. #paths
             .. "  •  FOUND: " .. #wireItems
             .. "\nBuy or collect " .. (#paths - #wireItems) .. " more Wire items, then confirm again."
         return
