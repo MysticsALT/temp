@@ -1571,12 +1571,14 @@ makeButton(toolkit, "PLACE WIRE ART IN FRONT OF ME", function()
         WireArtStatus.Text = "WIRE ART / LT2 WIRE PLACEMENT DATA NOT AVAILABLE"; return
     end
     local wireItems = {}
-    for _, container in ipairs({LocalPlayer:FindFirstChildOfClass("Backpack"), character}) do
-        if container then
-            for _, item in ipairs(container:GetDescendants()) do
-                if item.Name == "Wire" and (item:IsA("Model") or item:IsA("Tool")) then
-                    wireItems[#wireItems+1] = item
-                end
+    local inventoryRoots = {}
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    if backpack then inventoryRoots[#inventoryRoots+1] = backpack end
+    if character then inventoryRoots[#inventoryRoots+1] = character end
+    for _, container in ipairs(inventoryRoots) do
+        for _, item in ipairs(container:GetDescendants()) do
+            if item.Name == "Wire" and (item:IsA("Model") or item:IsA("Tool")) then
+                wireItems[#wireItems+1] = item
             end
         end
     end
