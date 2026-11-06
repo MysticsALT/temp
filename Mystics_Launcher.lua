@@ -633,7 +633,7 @@ local function LaunchLT2()
     task.spawn(function()
         local ok, errorMessage = pcall(function()
             -- Commit-pinned loading avoids silently changing module contents.
-            local lt2ModuleCommit = "bf1696d9e6d5f50c5ee7776e559a2d1c400475f5"
+            local lt2ModuleCommit = "566e76e9fb237344e81b04d659cc42b2fc4c0071"
             local lt2Url = "https://raw.githubusercontent.com/MysticsALT/temp/"
                 .. lt2ModuleCommit .. "/LT2.lua"
             if type(loadstring) ~= "function" then
@@ -651,7 +651,7 @@ local function LaunchLT2()
             end
             local sourceLength = #source
             local hasMarker = string.find(source, "MYSTICS | LUMBER TYCOON 2 MODULE", 1, true) ~= nil
-            local hasVersion = string.find(source, "V2.24 | Self-contained", 1, true) ~= nil
+            local hasVersion = string.find(source, "V2.29 | Self-contained", 1, true) ~= nil
             if sourceLength < 8000 then
                 error("LT2 download too short: " .. sourceLength .. " characters. Check executor HTTP response.")
             end
