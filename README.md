@@ -39,3 +39,13 @@ v2.24 adds a read-only SCAN REPLICATED STORAGE button to the main WIRE ART tab. 
 
 
 Temporary stability note: the launcher is rolled back to the confirmed-loading v2.24 module while the v2.28 load error is investigated. The ReplicatedStorage scan remains in the newer LT2.lua revision but is not active through the launcher.
+
+
+## v2.25 — Wire item inspection
+
+- Adds **INSPECT CLIENT ITEM INFO** to the WIRE ART tab.
+- Read-only inspection targets the observed `ReplicatedStorage.ClientItemInfo.Wire` path and reports its direct children, nested descendants, and `OtherInfo` value fields.
+- Also lists other replicated Wire-named objects and Wire-like models under `Workspace.PlayerModels`, including ownership information.
+- The inspector does not fire remotes, move objects, or consume inventory.
+- The launcher is pinned to the v2.25 LT2 commit and checks the v2.25 module marker.
+- This is a diagnostic update only; it does not claim to fix live wire placement.
