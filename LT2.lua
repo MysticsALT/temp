@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.30 | Self-contained utility module + opt-in legacy research tests
+-- V2.31 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.30  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.31  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.30",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.31",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1982,11 +1982,48 @@ makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
                     if purchased then label = label .. " / PurchasedBoxItemName=" .. tostring(purchased.Value) end
                     if typeValue then label = label .. " / Type=" .. tostring(typeValue.Value) end
                     if #parts > 0 then label = label .. " / parts: " .. table.concat(parts, ", ") end
-                    candidates[#candidates+1] = {label = label, localMatch = ownerMatches == true, owner = ownerKey}
+                    candidates[#candidates+1] = {label = label, localMatch = ownerMatches == true, owner = ownerKey, model = item}
                 end
             end
         end
+        -- Find the local plot using the same ownership helper as the PLOTS tab.
+        local ownPlot, ownOrigin = nil, nil
+        local properties = Workspace:FindFirstChild("Properties")
+        if properties then
+            for _, plot in ipairs(properties:GetChildren()) do
+                if belongsToLocal(plot) then
+                    ownPlot = plot
+                    local origin = plot:FindFirstChild("OriginSquare", true)
+                    if origin and origin:IsA("BasePart") then ownOrigin = origin.Position end
+                    break
+                end
+            end
+        end
+
+        -- Measure detected Wire model pivots against the local plot origin.
+        -- This is diagnostic only: it does not change or claim ownership.
+        local nearby = {}
+        if ownOrigin then
+            for _, entry in ipairs(candidates) do
+                local model = entry.model
+                if model and model.Parent then
+                    local okPivot, pivot = pcall(function()
+                        if model:IsA("Model") then return model:GetPivot() end
+                        if model:IsA("BasePart") then return model.CFrame end
+                        return nil
+                    end)
+                    if okPivot and pivot then
+                        entry.distance = (pivot.Position - ownOrigin).Magnitude
+                        nearby[#nearby+1] = entry
+                    end
+                end
+            end
+            table.sort(nearby, function(a,b) return a.distance < b.distance end)
+        end
+
         lines[#lines+1] = "Local player: " .. LocalPlayer.Name .. " / UserId: " .. tostring(LocalPlayer.UserId)
+        lines[#lines+1] = "Local plot: " .. (ownPlot and ownPlot:GetFullName() or "NOT FOUND")
+        lines[#lines+1] = "Plot origin: " .. (ownOrigin and tostring(ownOrigin) or "UNAVAILABLE")
         lines[#lines+1] = "PlayerModels: " .. (playerModels and ("FOUND / " .. inspected .. " top-level items checked") or "MISSING")
         local localCount = 0
         for _, entry in ipairs(candidates) do
@@ -2019,7 +2056,21 @@ makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
         local placeFolder = replicated:FindFirstChild("PlaceStructure")
         local wireRemote = placeFolder and placeFolder:FindFirstChild("ClientPlacedWire")
         local serverBindable = placeFolder and placeFolder:FindFirstChild("ClientPlacedWireServerServer")
-        lines[#lines+1] = "ClientPlacedWire: " .. (wireRemote and wireRemote.ClassName or "MISSING")
+        lines[#lines+1] = "Wire models with position: " .. #nearby
+        if #nearby > 0 then
+            lines[#lines+1] = "Nearest Wire models to your plot origin:"
+            for i, entry in ipairs(nearby) do
+                if i > 8 then break end
+                lines[#lines+1] = string.format("  %.1f studs / %s / owner %s",
+                    entry.distance, entry.model.Name, entry.owner)
+            end
+        elseif not ownOrigin then
+            lines[#lines+1] = "Cannot measure distance: local plot OriginSquare unavailable."
+        else
+            lines[#lines+1] = "No detected Wire models could be positioned relative to your plot."
+        end
+
+                lines[#lines+1] = "ClientPlacedWire: " .. (wireRemote and wireRemote.ClassName or "MISSING")
         lines[#lines+1] = "ClientPlacedWireServerServer: " .. (serverBindable and serverBindable.ClassName or "MISSING")
 
         local wireNamed = {}
@@ -3227,4 +3278,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.30 ready. Wire Art storage scanner enabled.")
+notify("Mystics LT2 v2.31 ready. Wire Art storage scanner enabled.")
