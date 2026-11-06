@@ -1676,7 +1676,7 @@ makeButton(wireArtPage, "SCAN REPLICATED STORAGE", function()
     for _, hit in ipairs(hits) do lines[#lines+1] = hit end
     if count == 0 then lines[#lines+1] = "No matching names replicated to client." end
     lines[#lines+1] = "Read-only scan. No placement request sent."
-    WireDiagStatus.Text = table.concat(lines, "\n")
+    WireArtStatus.Text = table.concat(lines, "\n")
 end, "card")
 
 makeButton(wireArtPage, "VALIDATE WIRE ART DATA", function()
