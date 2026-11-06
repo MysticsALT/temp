@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.23 | Self-contained utility module + opt-in legacy research tests
+-- V2.24 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.23  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.24  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.23",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.24",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1783,15 +1783,35 @@ makeButton(wireArtPage, "SCAN WIRE SETUP", function()
         local placeFolder = replicated:FindFirstChild("PlaceStructure")
         local remote = placeFolder and placeFolder:FindFirstChild("ClientPlacedWire")
         local purchasables = replicated:FindFirstChild("Purchasables")
-        local wireObjects = purchasables and purchasables:FindFirstChild("WireObjects")
-        local wireTemplate = wireObjects and wireObjects:FindFirstChild("Wire")
-        if not wireTemplate and purchasables then
-            wireTemplate = purchasables:FindFirstChild("Wire", true)
+        -- Public LT2 scripts reference WireObjects.Wire.OtherInfo, not a
+        -- standalone Wire template argument. Search nested folders too.
+        local wireObjects = (purchasables and purchasables:FindFirstChild("WireObjects"))
+            or replicated:FindFirstChild("WireObjects", true)
+        local wireEntry = wireObjects and wireObjects:FindFirstChild("Wire")
+        if not wireEntry and wireObjects then
+            for _, child in ipairs(wireObjects:GetChildren()) do
+                if string.lower(child.Name) == "wire" then wireEntry = child break end
+            end
         end
+        local otherInfo = wireEntry and wireEntry:FindFirstChild("OtherInfo")
         lines[#lines+1] = "Remote: " ..
             (remote and remote:IsA("RemoteEvent") and "FOUND (RemoteEvent)" or "MISSING / WRONG TYPE")
-        lines[#lines+1] = "Wire template: " ..
-            (wireTemplate and (wireTemplate:GetFullName() .. " [" .. wireTemplate.ClassName .. "]") or "MISSING")
+        lines[#lines+1] = "Purchasables folder: " ..
+            (purchasables and purchasables:GetFullName() or "MISSING")
+        lines[#lines+1] = "WireObjects folder: " ..
+            (wireObjects and wireObjects:GetFullName() or "MISSING")
+        lines[#lines+1] = "Wire entry: " ..
+            (wireEntry and (wireEntry:GetFullName() .. " [" .. wireEntry.ClassName .. "]") or "MISSING")
+        lines[#lines+1] = "Wire OtherInfo: " ..
+            (otherInfo and (otherInfo:GetFullName() .. " [" .. otherInfo.ClassName .. "]") or "MISSING")
+        if wireObjects then
+            local names = {}
+            for _, child in ipairs(wireObjects:GetChildren()) do
+                names[#names+1] = child.Name .. " [" .. child.ClassName .. "]"
+            end
+            lines[#lines+1] = "WireObjects children: " ..
+                (#names > 0 and table.concat(names, ", ") or "(empty)")
+        end
         local playerModels = Workspace:FindFirstChild("PlayerModels")
         local count, unowned = 0, 0
         if playerModels then
