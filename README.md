@@ -191,3 +191,11 @@ Temporary stability note: the launcher is rolled back to the confirmed-loading v
 - Preserved the v2.24 Wire Art Studio and design/preview features present in that baseline.
 - Launcher validates and pins to LT2 commit `da70baee9a86b1aee44e6b8dd898c3d7270a0ab0`.
 - This is a compatibility rollback; test the menu before reintroducing any diagnostics.
+
+
+## Launcher compatibility recovery
+
+- Restored the exact historical launcher source from the earlier v2.24 compatibility checkpoint.
+- Restored its matching immutable LT2 module pin: `bf1696d9e6d5f50c5ee7776e559a2d1c400475f5`.
+- Removed the later multi-source HTTP fallback and launcher validation changes from the active launcher.
+- No new LT2 features added.
