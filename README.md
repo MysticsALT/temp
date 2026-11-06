@@ -166,3 +166,11 @@ Temporary stability note: the launcher is rolled back to the confirmed-loading v
 - Splits the summary and geometry into readable pages, four node rows per page.
 - Retains read-only behavior.
 - Launcher pinned to LT2 commit `78c5b455d427cd042331e3287cff7be3c00f0094`.
+
+
+## Stability rollback — v2.36
+
+- Removed the v2.37 geometry pagination controls after reports of GUI instability.
+- Restored the prior v2.36 single-panel, read-only owned Wire geometry inspector.
+- Retained indexed Point/Line wire detection and the targeted local plot scanner.
+- Launcher pinned to LT2 commit `dc221b85d522b614898b766540f75f556bb34ce5`.
