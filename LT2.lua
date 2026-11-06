@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.36 | Self-contained utility module + opt-in legacy research tests
+-- V2.34 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.36  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.34  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.36",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.34",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1476,7 +1476,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.36 • Blood Red animated interface.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.34 • Blood Red animated interface.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1960,19 +1960,7 @@ makeButton(wireArtPage, "SCAN NEAR MY PLOT", function()
             local end1 = model:FindFirstChild("End1", true)
             local end2 = model:FindFirstChild("End2", true)
             local linePart = model:FindFirstChild("Line", true)
-            local pointNames, lineNames = {}, {}
-            for _, desc in ipairs(model:GetDescendants()) do
-                if desc.Name:match("^Point%d+$") then
-                    pointNames[#pointNames+1] = desc.Name
-                elseif desc.Name:match("^Line%d+$") then
-                    lineNames[#lineNames+1] = desc.Name
-                end
-            end
-            table.sort(pointNames, function(a,b) return (tonumber(a:match("%d+")) or 0) < (tonumber(b:match("%d+")) or 0) end)
-            table.sort(lineNames, function(a,b) return (tonumber(a:match("%d+")) or 0) < (tonumber(b:match("%d+")) or 0) end)
-            local legacyStructure = end1 ~= nil and end2 ~= nil and linePart ~= nil
-            local indexedStructure = #pointNames >= 2 and #lineNames >= 1
-            local structuralWire = legacyStructure or indexedStructure
+            local structuralWire = end1 ~= nil and end2 ~= nil and linePart ~= nil
             if namedWire then stats.named += 1 end
             if structuralWire then stats.structural += 1 end
 
@@ -2006,11 +1994,7 @@ makeButton(wireArtPage, "SCAN NEAR MY PLOT", function()
                             item = itemName and tostring(itemName.Value) or "-",
                             purchased = purchased and tostring(purchased.Value) or "-",
                             typeName = typeValue and tostring(typeValue.Value) or "-",
-                            structure = structuralWire,
-                            pointNames = table.concat(pointNames, ", "),
-                            lineNames = table.concat(lineNames, ", "),
-                            structureKind = legacyStructure and "End1/End2/Line"
-                                or (indexedStructure and "indexed Point/Line segments" or "identity only")
+                            structure = structuralWire
                         }
                     end
                 end
@@ -2041,7 +2025,7 @@ makeButton(wireArtPage, "SCAN NEAR MY PLOT", function()
         lines[#lines+1] = "PlayerModels models checked: " .. stats.playerModels
         lines[#lines+1] = "Local plot models checked: " .. stats.plotModels
         lines[#lines+1] = "Wire identity matches: " .. stats.named
-        lines[#lines+1] = "Wire structures (legacy or indexed Point/Line): " .. stats.structural
+        lines[#lines+1] = "End1/End2/Line structures: " .. stats.structural
         lines[#lines+1] = "Wire-like models within 120 studs: " .. #candidates
         if #candidates == 0 then
             lines[#lines+1] = "No nearby match in PlayerModels or the local plot. The placed item may use another container or not be a Model."
@@ -2054,138 +2038,13 @@ makeButton(wireArtPage, "SCAN NEAR MY PLOT", function()
                 lines[#lines+1] = string.format("%.1f studs | %s | %s | owner %s | parts %d",
                     match.distance, match.source, match.path, match.owner, match.parts)
                 lines[#lines+1] = "  ItemName=" .. match.item .. " / PurchasedBoxItemName=" .. match.purchased .. " / Type=" .. match.typeName
-                lines[#lines+1] = "  Parts: " .. match.partNames .. " / structure=" .. match.structureKind
-                if match.pointNames ~= "" or match.lineNames ~= "" then
-                    lines[#lines+1] = "  Point nodes: " .. (match.pointNames ~= "" and match.pointNames or "none")
-                        .. " / Line nodes: " .. (match.lineNames ~= "" and match.lineNames or "none")
-                end
+                lines[#lines+1] = "  Parts: " .. match.partNames .. " / structural=" .. tostring(match.structure)
             end
         end
         lines[#lines+1] = "READ-ONLY. No placement request sent."
     end)
     if not ok then lines[#lines+1] = "Proximity scan error: " .. tostring(err) end
     LocalWireProximityStatus.Text = table.concat(lines, "\\n")
-end, "card")
-
---========================================================
--- OWNED WIRE GEOMETRY INSPECTOR (READ-ONLY)
--- Reports the nearest locally-owned plain Wire's point/line node classes and positions.
--- No remotes, inventory actions, object changes, or placement.
---========================================================
-section(wireArtPage, "OWNED WIRE GEOMETRY INSPECTOR",
-    "Inspects the nearest locally owned plain Wire and reports Point/Line node classes and world positions. Read-only.")
-local OwnedWireGeometryStatus = info(wireArtPage,
-    "OWNED WIRE GEOMETRY / NOT RUN\\nPress INSPECT NEAREST OWNED WIRE. No placement request will be sent.",
-    360, "text")
-
-makeButton(wireArtPage, "INSPECT NEAREST OWNED WIRE", function()
-    local lines = {"OWNED WIRE GEOMETRY INSPECTION"}
-    local ok, err = pcall(function()
-        local playerModels = Workspace:FindFirstChild("PlayerModels")
-        local properties = Workspace:FindFirstChild("Properties")
-        local ownOrigin = nil
-        if properties then
-            for _, plot in ipairs(properties:GetChildren()) do
-                if belongsToLocal(plot) then
-                    local origin = plot:FindFirstChild("OriginSquare", true)
-                    if origin and origin:IsA("BasePart") then ownOrigin = origin.Position end
-                    break
-                end
-            end
-        end
-        if not playerModels then
-            lines[#lines+1] = "Workspace.PlayerModels: MISSING"
-            OwnedWireGeometryStatus.Text = table.concat(lines, "\\n")
-            return
-        end
-        if not ownOrigin then
-            lines[#lines+1] = "Local plot OriginSquare: NOT FOUND"
-            OwnedWireGeometryStatus.Text = table.concat(lines, "\\n")
-            return
-        end
-
-        local candidates = {}
-        for _, model in ipairs(playerModels:GetChildren()) do
-            if model:IsA("Model") then
-                local itemName = model:FindFirstChild("ItemName", true)
-                local purchased = model:FindFirstChild("PurchasedBoxItemName", true)
-                local owner = model:FindFirstChild("Owner", true)
-                local ownerValue = owner and owner.Value
-                local ownerText = owner and tostring(ownerValue) or "unknown"
-                local ownerMatches = owner and (
-                    ownerValue == LocalPlayer
-                    or ownerText == LocalPlayer.Name
-                    or ownerText == tostring(LocalPlayer.UserId)
-                )
-                local isPlainWire = (model.Name == "Wire")
-                    or (itemName and tostring(itemName.Value) == "Wire")
-                    or (purchased and tostring(purchased.Value) == "Wire")
-                if ownerMatches and isPlainWire then
-                    local pivotOk, pivot = pcall(function() return model:GetPivot() end)
-                    if pivotOk and pivot then
-                        candidates[#candidates+1] = {
-                            model = model,
-                            distance = (pivot.Position - ownOrigin).Magnitude
-                        }
-                    end
-                end
-            end
-        end
-        table.sort(candidates, function(a,b) return a.distance < b.distance end)
-        lines[#lines+1] = "Local player: " .. LocalPlayer.Name
-        lines[#lines+1] = "Owned plain Wire models found: " .. #candidates
-        if #candidates == 0 then
-            lines[#lines+1] = "No locally owned plain Wire model found in PlayerModels."
-        else
-            local chosen = candidates[1]
-            local model = chosen.model
-            lines[#lines+1] = string.format("Selected nearest Wire: %.2f studs from plot origin", chosen.distance)
-            lines[#lines+1] = "Model path: " .. model:GetFullName()
-            lines[#lines+1] = "Model class: " .. model.ClassName
-            local pivot = model:GetPivot()
-            lines[#lines+1] = "Model pivot position: " .. tostring(pivot.Position)
-            lines[#lines+1] = "Model pivot look vector: " .. tostring(pivot.LookVector)
-
-            local nodes = {}
-            for _, desc in ipairs(model:GetDescendants()) do
-                local pointIndex = desc.Name:match("^Point(%d+)$")
-                local lineIndex = desc.Name:match("^Line(%d+)$")
-                if pointIndex or lineIndex then
-                    local details = desc.Name .. " [" .. desc.ClassName .. "]"
-                    if desc:IsA("BasePart") then
-                        details = details .. " Position=" .. tostring(desc.Position)
-                            .. " Size=" .. tostring(desc.Size)
-                    elseif desc:IsA("Attachment") then
-                        details = details .. " WorldPosition=" .. tostring(desc.WorldPosition)
-                    elseif desc:IsA("ValueBase") then
-                        details = details .. " Value=" .. tostring(desc.Value)
-                    end
-                    local parentPath = desc.Parent and desc.Parent:GetFullName() or "no parent"
-                    details = details .. " Parent=" .. parentPath
-                    nodes[#nodes+1] = {
-                        index = tonumber(pointIndex or lineIndex) or 0,
-                        kind = pointIndex and 1 or 2,
-                        text = details
-                    }
-                end
-            end
-            table.sort(nodes, function(a,b)
-                if a.kind ~= b.kind then return a.kind < b.kind end
-                return a.index < b.index
-            end)
-            lines[#lines+1] = "Point/Line nodes found: " .. #nodes
-            for i, node in ipairs(nodes) do
-                if i > 24 then
-                    lines[#lines+1] = "... " .. (#nodes - 24) .. " more nodes omitted"
-                    break
-                end
-                lines[#lines+1] = node.text
-            end
-        end
-        lines[#lines+1] = "READ-ONLY. No placement request sent."
-    end)
-    if not ok then lines[#lines+1] = "Geometry inspection error: " .. tostring(err) end
-    OwnedWireGeometryStatus.Text = table.concat(lines, "\\n")
 end, "card")
 
 -- CLIENT ITEM INFO / WIRE INSPECTOR (READ-ONLY)
@@ -3564,4 +3423,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.36 ready. Wire Art storage scanner enabled.")
+notify("Mystics LT2 v2.34 ready. Wire Art storage scanner enabled.")
