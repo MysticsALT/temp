@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.26 | Self-contained utility module + opt-in legacy research tests
+-- V2.27 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.26  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.27  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.26",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.27",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1729,49 +1729,27 @@ local function getWirePlacementData()
     if not remote or not remote:IsA("RemoteEvent") then
         return nil, nil, nil, "ClientPlacedWire RemoteEvent missing"
     end
-    if not wireTemplate then
-        return nil, nil, nil, "Purchasables Wire template missing"
-    end
-    if not otherInfo then
-        return nil, nil, nil, "Wire template OtherInfo missing"
+    if not wireTemplate or not otherInfo then
+        return nil, nil, nil, "Wire template or OtherInfo missing"
     end
     local maxLengthValue = otherInfo:FindFirstChild("MaxLength")
-    local thicknessValue = otherInfo:FindFirstChild("Thickness")
     local maxLength = maxLengthValue and tonumber(maxLengthValue.Value)
-    local thickness = thicknessValue and tonumber(thicknessValue.Value)
     if not maxLength or maxLength <= 0 then
         return nil, nil, nil, "Wire OtherInfo.MaxLength missing or invalid"
     end
-    return remote, wireTemplate, {
-        OtherInfo = otherInfo,
-        MaxLength = maxLength,
-        Thickness = thickness
-    }
+    return remote, wireTemplate, maxLength
 end
 
 local function findPurchasedWireItems()
-    local found, seen = {}, {}
+    local found = {}
     local playerModels = Workspace:FindFirstChild("PlayerModels")
     if playerModels then
         for _, item in ipairs(playerModels:GetChildren()) do
-            if item:IsA("Model") and not seen[item] then
+            if item:IsA("Model") then
                 local owner = item:FindFirstChild("Owner")
                 local purchasedName = item:FindFirstChild("PurchasedBoxItemName")
                 if owner and owner.Value == LocalPlayer
                     and purchasedName and tostring(purchasedName.Value) == "Wire" then
-                    seen[item] = true
-                    found[#found+1] = item
-                end
-            end
-        end
-    end
-    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-    local character = LocalPlayer.Character
-    for _, container in ipairs({backpack, character}) do
-        if container then
-            for _, item in ipairs(container:GetChildren()) do
-                if item:IsA("Tool") and item.Name == "Wire" and not seen[item] then
-                    seen[item] = true
                     found[#found+1] = item
                 end
             end
@@ -1780,128 +1758,82 @@ local function findPurchasedWireItems()
     return found
 end
 
-local function splitPathsByWireLimit(paths, maxLength)
-    local result = {}
-    local safeLimit = maxLength * 0.88
-    for _, path in ipairs(paths) do
-        if #path >= 2 then
-            local current = {path[1]}
-            local used = 0
-            for i = 2, #path do
-                local a, b = path[i-1], path[i]
-                local delta = b-a
-                local distance = delta.Magnitude
-                if distance > 0.001 then
-                    local cursor = a
-                    while (b-cursor).Magnitude > 0.001 do
-                        local remaining = (b-cursor).Magnitude
-                        local room = safeLimit-used
-                        if room <= 0.001 and #current >= 2 then
-                            result[#result+1] = current
-                            current = {cursor}
-                            used = 0
-                            room = safeLimit
-                        end
-                        local step = math.min(remaining, room)
-                        local nextPoint = cursor + (b-cursor).Unit*step
-                        current[#current+1] = nextPoint
-                        used += step
-                        cursor = nextPoint
-                        if used >= safeLimit-0.001 and #current >= 2 then
-                            result[#result+1] = current
-                            current = {cursor}
-                            used = 0
-                        end
-                    end
-                end
-            end
-            if #current >= 2 then result[#result+1] = current end
-        end
-    end
-    return result
-end
-
-makeButton(wireArtPage, "CONFIRM & PLACE PREVIEW", function()
+makeButton(wireArtPage, "TEST ONE WIRE", function()
     if wireArtPlacing then
-        WireArtStatus.Text = "WIRE ART / PLACEMENT ALREADY RUNNING"
+        WireArtStatus.Text = "WIRE ART / TEST ALREADY RUNNING"
         return
     end
     if not wireArtPreviewFrame or not wireArtPreviewPaths then
-        WireArtStatus.Text = "WIRE ART / PREVIEW FIRST\nLoad a preset or update the preview before confirming."
+        WireArtStatus.Text = "WIRE ART / PREVIEW FIRST"
         return
     end
-
-    local remote, wireTemplate, wireMeta, setupError = getWirePlacementData()
+    local remote, wireTemplate, maxLength, setupError = getWirePlacementData()
     if not remote then
         WireArtStatus.Text = "WIRE ART / " .. tostring(setupError)
         return
     end
-
-    local purchasedWires = findPurchasedWireItems()
+    local wires = findPurchasedWireItems()
+    if #wires < 1 then
+        WireArtStatus.Text = "WIRE ART / NO OWNED PURCHASED WIRES FOUND\nBuy one Wire item and try again."
+        return
+    end
+    local firstPath = wireArtPreviewPaths[1]
+    if not firstPath or #firstPath < 2 then
+        WireArtStatus.Text = "WIRE ART / FIRST STROKE NEEDS AT LEAST TWO POINTS"
+        return
+    end
     local frame, width, height = wireArtPreviewFrame,
         wireArtPreviewWidth, wireArtPreviewHeight
-    local worldPaths = {}
-    for _, path in ipairs(wireArtPreviewPaths) do
-        local points = {}
-        for _, pair in ipairs(path) do
-            points[#points+1] = wireArtWorldPoint(frame, pair, width, height)
-        end
-        worldPaths[#worldPaths+1] = points
-    end
-
-    -- LT2's Wire.OtherInfo.MaxLength limits the total polyline length for
-    -- each placed wire. Split paths before sending so no single request
-    -- exceeds the game's own wire-length setting.
-    local placementPaths = splitPathsByWireLimit(worldPaths, wireMeta.MaxLength)
-    if #placementPaths == 0 then
-        WireArtStatus.Text = "WIRE ART / NO VALID WIRE SEGMENTS"
+    local points = {
+        wireArtWorldPoint(frame, firstPath[1], width, height),
+        wireArtWorldPoint(frame, firstPath[2], width, height)
+    }
+    if (points[2]-points[1]).Magnitude > maxLength then
+        WireArtStatus.Text = "WIRE ART / TEST SEGMENT EXCEEDS LT2 MAX LENGTH\nAdjust artwork size or preview scale first."
         return
     end
-    if #purchasedWires < #placementPaths then
-        WireArtStatus.Text = "WIRE ART / NOT ENOUGH PURCHASED WIRES\n"
-            .. "NEED: " .. #placementPaths .. "  •  FOUND: " .. #purchasedWires
-            .. "\nBuy " .. (#placementPaths-#purchasedWires) .. " more Wire items."
-        return
-    end
-
     wireArtPlacing = true
-    WireArtStatus.Text = "WIRE ART / PLACING " .. #placementPaths
-        .. " LT2 WIRES\nWire max length: " .. math.floor(wireMeta.MaxLength*100)/100
+    WireArtStatus.Text = "WIRE ART / SENDING ONE TEST WIRE"
     task.spawn(function()
-        local sent, errors = 0, 0
-        for index, points in ipairs(placementPaths) do
-            if State.closed then break end
-            local purchasedItem = purchasedWires[index]
-            if not purchasedItem or not purchasedItem.Parent then
-                errors += 1
-                WireArtStatus.Text = "WIRE ART / PURCHASED WIRE " .. index .. " IS MISSING"
-                break
-            end
-            -- Verified public LT2 spawn_wire pattern:
-            -- Wire template, world-space point list, player, purchased Wire model, true.
-            local ok, err = pcall(function()
-                remote:FireServer(wireTemplate, points, LocalPlayer, purchasedItem, true)
-            end)
-            if ok then
-                sent += 1
-            else
-                errors += 1
-                warn("[Mystics Wire Art] Placement request failed: " .. tostring(err))
-            end
-            if not State.closed then
-                WireArtStatus.Text = "WIRE ART / " .. index .. " OF " .. #placementPaths
-                    .. "\nRequests sent: " .. sent .. "  •  Errors: " .. errors
-            end
-            task.wait(0.45)
+        local before = {}
+        local playerModels = Workspace:FindFirstChild("PlayerModels")
+        if playerModels then
+            for _, item in ipairs(playerModels:GetChildren()) do before[item] = true end
         end
+        local ok, err = pcall(function()
+            -- Single-call smoke test using the public LT2 spawn_wire signature.
+            remote:FireServer(wireTemplate, points, LocalPlayer, wires[1], true)
+        end)
+        task.wait(1.5)
         wireArtPlacing = false
-        if not State.closed then
-            WireArtStatus.Text = "WIRE ART / REQUESTS SENT: " .. sent
-                .. "\nERRORS: " .. errors
-                .. "\nLT2 server validation determines whether each wire is accepted."
+        if State.closed then return end
+        if not ok then
+            WireArtStatus.Text = "WIRE ART / TEST REQUEST ERROR\n" .. tostring(err)
+            return
         end
+        local appeared = false
+        if playerModels then
+            for _, item in ipairs(playerModels:GetChildren()) do
+                if not before[item] then
+                    local owner = item:FindFirstChild("Owner")
+                    local name = item:FindFirstChild("PurchasedBoxItemName")
+                    if owner and owner.Value == LocalPlayer
+                        and name and tostring(name.Value) == "Wire" then
+                        appeared = true
+                        break
+                    end
+                end
+            end
+        end
+        WireArtStatus.Text = appeared
+            and "WIRE ART / TEST WIRE REPLICATED\nSingle-wire test passed. Bulk placement remains disabled pending your confirmation."
+            or "WIRE ART / REQUEST SENT, NOT VERIFIED\nCheck your plot for one short wire. No additional requests were sent."
     end)
 end, "cta")
+
+makeButton(wireArtPage, "CONFIRM & PLACE PREVIEW", function()
+    WireArtStatus.Text = "WIRE ART / BULK PLACEMENT PAUSED\nRun TEST ONE WIRE first. This build deliberately sends at most one placement request per test to prevent another client crash."
+end, "quiet")
 
 --========================================================
 -- WIRE PLACEMENT DIAGNOSTICS (SAFE INCREMENTAL BUILD)
