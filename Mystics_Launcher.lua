@@ -633,7 +633,7 @@ local function LaunchLT2()
     task.spawn(function()
         local ok, errorMessage = pcall(function()
             -- Commit-pinned loading avoids silently changing module contents.
-            local lt2ModuleCommit = "400e533ff9b08849cac976192dc4bf0bdbbd8424"
+            local lt2ModuleCommit = "f76789f2ca866f3998529e558c1c00e0b6134555"
             local lt2Url = "https://raw.githubusercontent.com/MysticsALT/temp/"
                 .. lt2ModuleCommit .. "/LT2.lua"
             if type(loadstring) ~= "function" then
@@ -652,7 +652,7 @@ local function LaunchLT2()
                 or not string.find(source, "MYSTICS | LUMBER TYCOON 2 MODULE", 1, true) then
                 error("GitHub returned an unexpected or incomplete LT2 module.")
             end
-            if not string.find(source, "V2.22 | Self-contained", 1, true) then
+            if not string.find(source, "V2.23 | Self-contained", 1, true) then
                 error("Old LT2 module downloaded despite loader update; cache is stale.")
             end
             local chunk, compileError = loadstring(source, "Mystics_LT2")
