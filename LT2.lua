@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.33 | Self-contained utility module + opt-in legacy research tests
+-- V2.34 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.31  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.34  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.31",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.34",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1476,7 +1476,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.16 • Blood Red animated interface.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.34 • Blood Red animated interface.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -3423,4 +3423,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.31 ready. Wire Art storage scanner enabled.")
+notify("Mystics LT2 v2.34 ready. Wire Art storage scanner enabled.")
