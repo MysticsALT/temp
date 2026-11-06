@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.28 | Self-contained utility module + opt-in legacy research tests
+-- V2.24 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.28  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.24  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.28",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.24",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1775,7 +1775,6 @@ section(wireArtPage, "WIRE PLACEMENT DIAGNOSTICS",
 local WireDiagStatus = info(wireArtPage,
     "WIRE DIAGNOSTICS / NOT RUN\nPress SCAN WIRE SETUP. This does not place or consume wires.",
     76, "text")
-
 
 makeButton(wireArtPage, "SCAN REPLICATED STORAGE", function()
     local lines = {"REPLICATED STORAGE / READ-ONLY SCAN"}
