@@ -633,7 +633,7 @@ local function LaunchLT2()
     task.spawn(function()
         local ok, errorMessage = pcall(function()
             -- Commit-pinned loading avoids silently changing module contents.
-            local lt2ModuleCommit = "5b0abf70b404654ebf99b3b4eb3b26ece1b7661f"
+            local lt2ModuleCommit = "c9c5597cfa41c2452030affef0c6ef06b0d24170"
             local lt2Url = "https://raw.githubusercontent.com/MysticsALT/temp/"
                 .. lt2ModuleCommit .. "/LT2.lua"
             if type(loadstring) ~= "function" then
