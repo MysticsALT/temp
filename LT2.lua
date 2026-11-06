@@ -1909,7 +1909,7 @@ end, "card")
 section(wireArtPage, "CLIENT ITEM INFO / WIRE INSPECTOR",
     "Read-only inspection of ClientItemInfo.Wire, its OtherInfo metadata, and matching replicated Wire models.")
 local WireItemInspectStatus = info(wireArtPage,
-    "WIRE ITEM INSPECTOR / NOT RUN\\nPress INSPECT CLIENT ITEM INFO. No placement request will be sent.",
+    "WIRE ITEM INSPECTOR / NOT RUN\nPress INSPECT CLIENT ITEM INFO. No placement request will be sent.",
     190, "text")
 
 makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
@@ -2009,7 +2009,7 @@ makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
         lines[#lines+1] = "READ-ONLY INSPECTION. No placement request sent."
     end)
     if not ok then lines[#lines+1] = "Inspector error: " .. tostring(err) end
-    WireItemInspectStatus.Text = table.concat(lines, "\\n")
+    WireItemInspectStatus.Text = table.concat(lines, "\n")
 end, "card")
 
 local buildPage = toolkit
