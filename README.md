@@ -174,3 +174,11 @@ Temporary stability note: the launcher is rolled back to the confirmed-loading v
 - Restored the prior v2.36 single-panel, read-only owned Wire geometry inspector.
 - Retained indexed Point/Line wire detection and the targeted local plot scanner.
 - Launcher pinned to LT2 commit `dc221b85d522b614898b766540f75f556bb34ce5`.
+
+
+## Stability rollback — v2.34
+
+- Reverted LT2.lua to the pre-owned-geometry-inspector v2.34 baseline after reports of game crashes when opening the GUI.
+- Removed the owned geometry inspector and all pagination controls.
+- Retained the earlier read-only local plot proximity scan and Wire Art Studio controls.
+- Launcher pinned to LT2 commit `f7c732a7f3a3f916e168eac18058dcfde5a0a234`.
