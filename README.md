@@ -24,3 +24,12 @@ Then select **Lumber Tycoon 2** in the Mystics Hub. The launcher downloads and r
 - The launcher pins the LT2 module to commit `c48ecd39a94f5e4f03a9f8ff2c36341592761a79`.
 - The launcher checks for the `V2.24 | Self-contained` module marker before executing.
 - To update the LT2 experience, update `LT2.lua`, then update the pinned commit and version marker in `Mystics_Launcher.lua`.
+
+
+## Experimental Wire Art placement lab
+
+- `WireArtPlacementLab.lua` is a separate, opt-in experiment and is not loaded by `Mystics_Launcher.lua`.
+- Execute it manually only in Lumber Tycoon 2. It opens a small panel and does nothing until PLACE ONE TEST WIRE is clicked.
+- The test checks for an owned plot, the recursively located `Purchasables` Wire template, `PlaceStructure.ClientPlacedWire`, and one owned purchased Wire model in `Workspace.PlayerModels`.
+- On click it sends at most one short two-point request using the public LT2 five-argument `ClientPlacedWire:FireServer(template, points, player, purchasedWire, true)` pattern. The test wire may remain on the plot.
+- This is an experimental compatibility probe, not a confirmed fix. The main launcher remains pinned to the previously confirmed-loading v2.24 module; this lab must not be added to the launcher until separately tested.
