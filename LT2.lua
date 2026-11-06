@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.36 | Self-contained utility module + opt-in legacy research tests
+-- V2.37 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.36  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.37  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.36",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.37",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1476,7 +1476,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.36 • Blood Red animated interface.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.37 • Blood Red animated interface.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -2069,14 +2069,34 @@ end, "card")
 
 --========================================================
 -- OWNED WIRE GEOMETRY INSPECTOR (READ-ONLY)
--- Reports the nearest locally-owned plain Wire's point/line node classes and positions.
+-- Paginated output so every node can be read in the fixed-height UI panel.
 -- No remotes, inventory actions, object changes, or placement.
 --========================================================
 section(wireArtPage, "OWNED WIRE GEOMETRY INSPECTOR",
-    "Inspects the nearest locally owned plain Wire and reports Point/Line node classes and world positions. Read-only.")
+    "Inspects the nearest locally owned plain Wire. Results are split into short pages. Read-only.")
 local OwnedWireGeometryStatus = info(wireArtPage,
-    "OWNED WIRE GEOMETRY / NOT RUN\\nPress INSPECT NEAREST OWNED WIRE. No placement request will be sent.",
-    360, "text")
+    "OWNED WIRE GEOMETRY / NOT RUN\\nPress INSPECT NEAREST OWNED WIRE.",
+    300, "text")
+local OwnedWireGeometryPages = {}
+local OwnedWireGeometryPage = 1
+
+local function renderOwnedWireGeometryPage()
+    if #OwnedWireGeometryPages == 0 then return end
+    OwnedWireGeometryPage = math.clamp(OwnedWireGeometryPage, 1, #OwnedWireGeometryPages)
+    OwnedWireGeometryStatus.Text = table.concat(OwnedWireGeometryPages[OwnedWireGeometryPage], "\\n")
+end
+
+makeButton(wireArtPage, "PREVIOUS GEOMETRY PAGE", function()
+    if #OwnedWireGeometryPages == 0 then return end
+    OwnedWireGeometryPage = math.max(1, OwnedWireGeometryPage - 1)
+    renderOwnedWireGeometryPage()
+end, "card")
+
+makeButton(wireArtPage, "NEXT GEOMETRY PAGE", function()
+    if #OwnedWireGeometryPages == 0 then return end
+    OwnedWireGeometryPage = math.min(#OwnedWireGeometryPages, OwnedWireGeometryPage + 1)
+    renderOwnedWireGeometryPage()
+end, "card")
 
 makeButton(wireArtPage, "INSPECT NEAREST OWNED WIRE", function()
     local lines = {"OWNED WIRE GEOMETRY INSPECTION"}
@@ -2095,97 +2115,110 @@ makeButton(wireArtPage, "INSPECT NEAREST OWNED WIRE", function()
         end
         if not playerModels then
             lines[#lines+1] = "Workspace.PlayerModels: MISSING"
-            OwnedWireGeometryStatus.Text = table.concat(lines, "\\n")
-            return
-        end
-        if not ownOrigin then
+        elseif not ownOrigin then
             lines[#lines+1] = "Local plot OriginSquare: NOT FOUND"
-            OwnedWireGeometryStatus.Text = table.concat(lines, "\\n")
-            return
-        end
+        else
+            local candidates = {}
+            for _, model in ipairs(playerModels:GetChildren()) do
+                if model:IsA("Model") then
+                    local itemName = model:FindFirstChild("ItemName", true)
+                    local purchased = model:FindFirstChild("PurchasedBoxItemName", true)
+                    local owner = model:FindFirstChild("Owner", true)
+                    local ownerValue = owner and owner.Value
+                    local ownerText = owner and tostring(ownerValue) or "unknown"
+                    local ownerMatches = owner and (
+                        ownerValue == LocalPlayer
+                        or ownerText == LocalPlayer.Name
+                        or ownerText == tostring(LocalPlayer.UserId)
+                    )
+                    local isPlainWire = (model.Name == "Wire")
+                        or (itemName and tostring(itemName.Value) == "Wire")
+                        or (purchased and tostring(purchased.Value) == "Wire")
+                    if ownerMatches and isPlainWire then
+                        local pivotOk, pivot = pcall(function() return model:GetPivot() end)
+                        if pivotOk and pivot then
+                            candidates[#candidates+1] = {
+                                model = model,
+                                distance = (pivot.Position - ownOrigin).Magnitude
+                            }
+                        end
+                    end
+                end
+            end
+            table.sort(candidates, function(a,b) return a.distance < b.distance end)
+            lines[#lines+1] = "Local player: " .. LocalPlayer.Name
+            lines[#lines+1] = "Owned plain Wire models found: " .. #candidates
+            if #candidates == 0 then
+                lines[#lines+1] = "No locally owned plain Wire model found in PlayerModels."
+            else
+                local chosen = candidates[1]
+                local model = chosen.model
+                lines[#lines+1] = string.format("Selected nearest Wire: %.2f studs from plot origin", chosen.distance)
+                lines[#lines+1] = "Model path: " .. model:GetFullName()
+                lines[#lines+1] = "Model class: " .. model.ClassName
+                local pivot = model:GetPivot()
+                lines[#lines+1] = "Pivot: " .. tostring(pivot.Position)
+                lines[#lines+1] = "Look vector: " .. tostring(pivot.LookVector)
 
-        local candidates = {}
-        for _, model in ipairs(playerModels:GetChildren()) do
-            if model:IsA("Model") then
-                local itemName = model:FindFirstChild("ItemName", true)
-                local purchased = model:FindFirstChild("PurchasedBoxItemName", true)
-                local owner = model:FindFirstChild("Owner", true)
-                local ownerValue = owner and owner.Value
-                local ownerText = owner and tostring(ownerValue) or "unknown"
-                local ownerMatches = owner and (
-                    ownerValue == LocalPlayer
-                    or ownerText == LocalPlayer.Name
-                    or ownerText == tostring(LocalPlayer.UserId)
-                )
-                local isPlainWire = (model.Name == "Wire")
-                    or (itemName and tostring(itemName.Value) == "Wire")
-                    or (purchased and tostring(purchased.Value) == "Wire")
-                if ownerMatches and isPlainWire then
-                    local pivotOk, pivot = pcall(function() return model:GetPivot() end)
-                    if pivotOk and pivot then
-                        candidates[#candidates+1] = {
-                            model = model,
-                            distance = (pivot.Position - ownOrigin).Magnitude
+                local nodes = {}
+                for _, desc in ipairs(model:GetDescendants()) do
+                    local pointIndex = desc.Name:match("^Point(%d+)$")
+                    local lineIndex = desc.Name:match("^Line(%d+)$")
+                    if pointIndex or lineIndex then
+                        local details = desc.Name .. " [" .. desc.ClassName .. "]"
+                        if desc:IsA("BasePart") then
+                            details = details .. " Pos=" .. tostring(desc.Position)
+                                .. " Size=" .. tostring(desc.Size)
+                        elseif desc:IsA("Attachment") then
+                            details = details .. " WorldPos=" .. tostring(desc.WorldPosition)
+                        elseif desc:IsA("ValueBase") then
+                            details = details .. " Value=" .. tostring(desc.Value)
+                        end
+                        nodes[#nodes+1] = {
+                            index = tonumber(pointIndex or lineIndex) or 0,
+                            kind = pointIndex and 1 or 2,
+                            text = details
                         }
                     end
                 end
-            end
-        end
-        table.sort(candidates, function(a,b) return a.distance < b.distance end)
-        lines[#lines+1] = "Local player: " .. LocalPlayer.Name
-        lines[#lines+1] = "Owned plain Wire models found: " .. #candidates
-        if #candidates == 0 then
-            lines[#lines+1] = "No locally owned plain Wire model found in PlayerModels."
-        else
-            local chosen = candidates[1]
-            local model = chosen.model
-            lines[#lines+1] = string.format("Selected nearest Wire: %.2f studs from plot origin", chosen.distance)
-            lines[#lines+1] = "Model path: " .. model:GetFullName()
-            lines[#lines+1] = "Model class: " .. model.ClassName
-            local pivot = model:GetPivot()
-            lines[#lines+1] = "Model pivot position: " .. tostring(pivot.Position)
-            lines[#lines+1] = "Model pivot look vector: " .. tostring(pivot.LookVector)
-
-            local nodes = {}
-            for _, desc in ipairs(model:GetDescendants()) do
-                local pointIndex = desc.Name:match("^Point(%d+)$")
-                local lineIndex = desc.Name:match("^Line(%d+)$")
-                if pointIndex or lineIndex then
-                    local details = desc.Name .. " [" .. desc.ClassName .. "]"
-                    if desc:IsA("BasePart") then
-                        details = details .. " Position=" .. tostring(desc.Position)
-                            .. " Size=" .. tostring(desc.Size)
-                    elseif desc:IsA("Attachment") then
-                        details = details .. " WorldPosition=" .. tostring(desc.WorldPosition)
-                    elseif desc:IsA("ValueBase") then
-                        details = details .. " Value=" .. tostring(desc.Value)
-                    end
-                    local parentPath = desc.Parent and desc.Parent:GetFullName() or "no parent"
-                    details = details .. " Parent=" .. parentPath
-                    nodes[#nodes+1] = {
-                        index = tonumber(pointIndex or lineIndex) or 0,
-                        kind = pointIndex and 1 or 2,
-                        text = details
-                    }
-                end
-            end
-            table.sort(nodes, function(a,b)
-                if a.kind ~= b.kind then return a.kind < b.kind end
-                return a.index < b.index
-            end)
-            lines[#lines+1] = "Point/Line nodes found: " .. #nodes
-            for i, node in ipairs(nodes) do
-                if i > 24 then
-                    lines[#lines+1] = "... " .. (#nodes - 24) .. " more nodes omitted"
-                    break
-                end
-                lines[#lines+1] = node.text
+                table.sort(nodes, function(a,b)
+                    if a.kind ~= b.kind then return a.kind < b.kind end
+                    return a.index < b.index
+                end)
+                lines[#lines+1] = "Point/Line nodes found: " .. #nodes
+                for _, node in ipairs(nodes) do lines[#lines+1] = node.text end
             end
         end
         lines[#lines+1] = "READ-ONLY. No placement request sent."
     end)
     if not ok then lines[#lines+1] = "Geometry inspection error: " .. tostring(err) end
-    OwnedWireGeometryStatus.Text = table.concat(lines, "\\n")
+
+    -- Keep the summary on page 1 and limit each panel to four geometry rows.
+    OwnedWireGeometryPages = {}
+    local page = {}
+    local function pushPage()
+        if #page > 0 then
+            OwnedWireGeometryPages[#OwnedWireGeometryPages+1] = page
+            page = {}
+        end
+    end
+    local nodeRows = 0
+    for _, line in ipairs(lines) do
+        local isNode = line:match("^Point%d+ %[%") or line:match("^Line%d+ %[%")
+        if isNode and nodeRows >= 4 then
+            pushPage()
+            page[#page+1] = "OWNED WIRE GEOMETRY / continued"
+            nodeRows = 0
+        end
+        page[#page+1] = line
+        if isNode then nodeRows += 1 end
+    end
+    pushPage()
+    if #OwnedWireGeometryPages == 0 then
+        OwnedWireGeometryPages = {{"No geometry output."}}
+    end
+    OwnedWireGeometryPage = 1
+    renderOwnedWireGeometryPage()
 end, "card")
 
 -- CLIENT ITEM INFO / WIRE INSPECTOR (READ-ONLY)
@@ -3564,4 +3597,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.36 ready. Wire Art storage scanner enabled.")
+notify("Mystics LT2 v2.37 ready. Wire Art storage scanner enabled.")
