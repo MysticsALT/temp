@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.29 | Self-contained utility module + opt-in legacy research tests
+-- V2.30 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.29  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.30  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.29",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.30",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1910,7 +1910,7 @@ section(wireArtPage, "CLIENT ITEM INFO / WIRE INSPECTOR",
     "Read-only inspection. Prioritizes actual placed Wire models and ownership so the useful results stay visible.")
 local WireItemInspectStatus = info(wireArtPage,
     "WIRE ITEM INSPECTOR / NOT RUN\\nPress INSPECT CLIENT ITEM INFO. No placement request will be sent.",
-    300, "text")
+    350, "text")
 
 makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
     local lines = {"CLIENT ITEM INFO / WIRE INSPECTION"}
@@ -1943,7 +1943,7 @@ makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
         -- Inspect the actual world models first. Search each top-level item and
         -- its descendants for Wire identity and ownership metadata.
         local playerModels = Workspace:FindFirstChild("PlayerModels")
-        local candidates, inspected = {}, 0
+        local candidates, inspected, ownerCounts = {}, 0, {}
         if playerModels then
             for _, item in ipairs(playerModels:GetChildren()) do
                 inspected += 1
@@ -1974,24 +1974,45 @@ makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
                             if #parts < 3 then parts[#parts+1] = desc.Name end
                         end
                     end
+                    local ownerKey = owner and ownerRaw or "Owner missing"
+                    ownerCounts[ownerKey] = (ownerCounts[ownerKey] or 0) + 1
                     local label = item.Name .. " [" .. kind .. "] / owner: " .. ownerText
                         .. " [" .. ownerClass .. "] / parts: " .. partCount
                     if itemName then label = label .. " / ItemName=" .. tostring(itemName.Value) end
                     if purchased then label = label .. " / PurchasedBoxItemName=" .. tostring(purchased.Value) end
                     if typeValue then label = label .. " / Type=" .. tostring(typeValue.Value) end
                     if #parts > 0 then label = label .. " / parts: " .. table.concat(parts, ", ") end
-                    candidates[#candidates+1] = label
-                    if #candidates >= 8 then break end
+                    candidates[#candidates+1] = {label = label, localMatch = ownerMatches == true, owner = ownerKey}
                 end
             end
         end
         lines[#lines+1] = "Local player: " .. LocalPlayer.Name .. " / UserId: " .. tostring(LocalPlayer.UserId)
         lines[#lines+1] = "PlayerModels: " .. (playerModels and ("FOUND / " .. inspected .. " top-level items checked") or "MISSING")
-        lines[#lines+1] = "Wire-like placed models: " .. #candidates
+        local localCount = 0
+        for _, entry in ipairs(candidates) do
+            if entry.localMatch then localCount += 1 end
+        end
+        table.sort(candidates, function(a, b)
+            if a.localMatch ~= b.localMatch then return a.localMatch end
+            return a.owner < b.owner
+        end)
+        lines[#lines+1] = "Wire-like placed models: " .. #candidates .. " / local-owner matches: " .. localCount
         if #candidates == 0 then
-            lines[#lines+1] = "  None detected. Confirm one normal Wire is placed on your plot, then scan again."
+            lines[#lines+1] = "  None detected. Place a normal Wire on your plot, then scan again."
         else
-            for _, entry in ipairs(candidates) do lines[#lines+1] = "  " .. entry end
+            local ownerSummary = {}
+            for ownerName, count in pairs(ownerCounts) do
+                ownerSummary[#ownerSummary+1] = ownerName .. "=" .. count
+            end
+            table.sort(ownerSummary)
+            lines[#lines+1] = "Owner counts: " .. table.concat(ownerSummary, ", ")
+            for i, entry in ipairs(candidates) do
+                if i > 10 then
+                    lines[#lines+1] = "  ... " .. (#candidates - 10) .. " more model(s) not displayed"
+                    break
+                end
+                lines[#lines+1] = "  " .. entry.label
+            end
         end
 
         -- A short, secondary list of similarly named replicated objects.
@@ -3206,4 +3227,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.29 ready. Wire Art storage scanner enabled.")
+notify("Mystics LT2 v2.30 ready. Wire Art storage scanner enabled.")
