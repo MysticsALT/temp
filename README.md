@@ -101,3 +101,10 @@ Temporary stability note: the launcher is rolled back to the confirmed-loading v
 - Reports the nearest detected Wire models and their distance from the plot origin.
 - This is read-only diagnostics: it does not call placement remotes or modify inventory.
 - Launcher pinned to LT2 commit `3a9e174b1af115d3b80a83e3730ee2ca497a1ef9`.
+
+
+## Launcher download reliability fix
+
+- The launcher now tries the immutable v2.31 commit URL first, then the GitHub main-branch raw URL, then jsDelivr.
+- Each response is validated for source length, the LT2 module marker, and the v2.31 marker before compilation.
+- If all sources fail, the console error lists the attempted URLs and response previews.
