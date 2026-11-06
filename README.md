@@ -151,3 +151,10 @@ Temporary stability note: the launcher is rolled back to the confirmed-loading v
 - Reports the model pivot and each PointN/LineN node's class, world position or value, and parent path.
 - Does not call remotes, move objects, or consume inventory.
 - Launcher pinned to LT2 commit `f4f9eb1990a0781b9d64790fce1f9cf0651f65c4`.
+
+
+## v2.36 visible version label correction
+
+- Corrects the main header subtitle, footer, About section, and startup notification from stale v2.35 text to v2.36.
+- Retains the owned Wire geometry inspector.
+- Launcher pinned to LT2 commit `5eac052ae22e8e905f681ebd4696d3d3eaaeceec`.
