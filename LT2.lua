@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.31 | Self-contained utility module + opt-in legacy research tests
+-- V2.32 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -1900,6 +1900,111 @@ makeButton(wireArtPage, "SCAN WIRE SETUP", function()
     WireDiagStatus.Text = table.concat(lines, "\n")
 end, "card")
 
+
+--========================================================
+-- LOCAL PLOT PROXIMITY SCAN (READ-ONLY)
+-- Searches nearby Workspace models for wire identity or End1/End2/Line structure.
+-- No remotes, inventory actions, or object changes.
+--========================================================
+section(wireArtPage, "LOCAL PLOT PROXIMITY SCAN",
+    "Searches up to 12,000 Workspace descendants for wire-like models within 120 studs of your plot origin. Read-only.")
+local LocalWireProximityStatus = info(wireArtPage,
+    "LOCAL PLOT SCAN / NOT RUN\\nPress SCAN NEAR MY PLOT. No placement request will be sent.",
+    300, "text")
+
+makeButton(wireArtPage, "SCAN NEAR MY PLOT", function()
+    local lines = {"LOCAL PLOT PROXIMITY SCAN"}
+    local ok, err = pcall(function()
+        local properties = Workspace:FindFirstChild("Properties")
+        local ownPlot, ownOrigin = nil, nil
+        if properties then
+            for _, plot in ipairs(properties:GetChildren()) do
+                if belongsToLocal(plot) then
+                    ownPlot = plot
+                    local origin = plot:FindFirstChild("OriginSquare", true)
+                    if origin and origin:IsA("BasePart") then ownOrigin = origin.Position end
+                    break
+                end
+            end
+        end
+        lines[#lines+1] = "Local player: " .. LocalPlayer.Name
+        lines[#lines+1] = "Local plot: " .. (ownPlot and ownPlot:GetFullName() or "NOT FOUND")
+        if not ownOrigin then
+            lines[#lines+1] = "OriginSquare: NOT FOUND"
+            LocalWireProximityStatus.Text = table.concat(lines, "\\n")
+            return
+        end
+        lines[#lines+1] = "OriginSquare: " .. tostring(ownOrigin)
+        local all = Workspace:GetDescendants()
+        local scanLimit, scanned, modelCount = 12000, 0, 0
+        local matches = {}
+        for index, obj in ipairs(all) do
+            if index > scanLimit then break end
+            scanned += 1
+            if obj:IsA("Model") then
+                modelCount += 1
+                local lowerName = string.lower(obj.Name)
+                local itemName = obj:FindFirstChild("ItemName", true)
+                local purchased = obj:FindFirstChild("PurchasedBoxItemName", true)
+                local typeValue = obj:FindFirstChild("Type", true)
+                local function containsWire(valueObject)
+                    return valueObject and valueObject:IsA("ValueBase")
+                        and string.find(string.lower(tostring(valueObject.Value)), "wire", 1, true) ~= nil
+                end
+                local end1 = obj:FindFirstChild("End1", true)
+                local end2 = obj:FindFirstChild("End2", true)
+                local linePart = obj:FindFirstChild("Line", true)
+                local namedWire = string.find(lowerName, "wire", 1, true) ~= nil
+                    or containsWire(itemName) or containsWire(purchased) or containsWire(typeValue)
+                local structuralWire = end1 ~= nil and end2 ~= nil and linePart ~= nil
+                if namedWire or structuralWire then
+                    local okPivot, pivot = pcall(function() return obj:GetPivot() end)
+                    local position = okPivot and pivot and pivot.Position or nil
+                    if not position then
+                        local part = obj:FindFirstChildWhichIsA("BasePart", true)
+                        position = part and part.Position or nil
+                    end
+                    if position then
+                        local distance = (position - ownOrigin).Magnitude
+                        if distance <= 120 then
+                            local owner = obj:FindFirstChild("Owner", true)
+                            local ownerValue = owner and owner:IsA("ValueBase") and tostring(owner.Value) or "unknown"
+                            local tags = {}
+                            if namedWire then tags[#tags+1] = "wire identity" end
+                            if structuralWire then tags[#tags+1] = "End1/End2/Line" end
+                            matches[#matches+1] = {
+                                distance = distance,
+                                path = obj:GetFullName(),
+                                owner = ownerValue,
+                                tags = table.concat(tags, "+"),
+                                name = obj.Name
+                            }
+                        end
+                    end
+                end
+            end
+        end
+        table.sort(matches, function(a,b) return a.distance < b.distance end)
+        lines[#lines+1] = "Workspace descendants scanned: " .. scanned .. ( #all > scanLimit and " (LIMITED)" or "")
+        lines[#lines+1] = "Models checked: " .. modelCount
+        lines[#lines+1] = "Wire-like models within 120 studs: " .. #matches
+        if #matches == 0 then
+            lines[#lines+1] = "No matching models nearby. Check the plot origin and confirm the test Wire is still placed."
+        else
+            for i, match in ipairs(matches) do
+                if i > 12 then
+                    lines[#lines+1] = "... " .. (#matches - 12) .. " more nearby matches omitted"
+                    break
+                end
+                lines[#lines+1] = string.format("%.1f studs | %s | owner %s | %s",
+                    match.distance, match.path, match.owner, match.tags)
+            end
+        end
+        lines[#lines+1] = "READ-ONLY. No placement request sent."
+    end)
+    if not ok then lines[#lines+1] = "Proximity scan error: " .. tostring(err) end
+    LocalWireProximityStatus.Text = table.concat(lines, "\\n")
+end, "card")
 
 --========================================================
 -- CLIENT ITEM INFO / WIRE INSPECTOR (READ-ONLY)
