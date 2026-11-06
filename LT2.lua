@@ -1652,9 +1652,6 @@ makeButton(wireArtPage, "CLEAR PREVIEW", function()
     clearWireArtPreview()
     WireArtStatus.Text = "WIRE ART / PREVIEW CLEARED"
 end, "quiet")
-local ReplicatedScanStatus = info(wireArtPage,
-    "REPLICATED STORAGE / NOT SCANNED\nPress SCAN REPLICATED STORAGE. Read-only; no placement requests.",
-    88, "text")
 makeButton(wireArtPage, "SCAN REPLICATED STORAGE", function()
     local ok, result = pcall(function()
         local lines = {"REPLICATED STORAGE / READ-ONLY"}
@@ -1682,10 +1679,12 @@ makeButton(wireArtPage, "SCAN REPLICATED STORAGE", function()
         lines[#lines+1] = "Read-only scan. No placement request sent."
         return table.concat(lines, "\n")
     end)
-    if ReplicatedScanStatus then
-        ReplicatedScanStatus.Text = ok and result or ("SCAN ERROR: " .. tostring(result))
+    -- Deliberately use console output rather than any GUI TextLabel reference.
+    -- This isolates the scan from nil/stale UI label errors.
+    if ok then
+        print("[Mystics Wire Art Scan]\n" .. result)
     else
-        warn("[Mystics Wire Art] Scan status label was not created.")
+        warn("[Mystics Wire Art Scan ERROR] " .. tostring(result))
     end
 end, "card")
 
