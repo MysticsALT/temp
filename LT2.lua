@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.28 | Self-contained utility module + opt-in legacy research tests
+-- V2.29 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.28  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.29  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.28",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.29",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1958,7 +1958,14 @@ makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
                     or (typeValue and string.lower(tostring(typeValue.Value)):find("wire", 1, true) ~= nil)
                 if isWire then
                     local owner = item:FindFirstChild("Owner", true)
-                    local ownerText = owner and (owner.Value == LocalPlayer and "LOCAL PLAYER" or tostring(owner.Value)) or "Owner missing"
+                    local ownerRaw = owner and tostring(owner.Value) or "Owner missing"
+                    local ownerMatches = owner and (
+                        owner.Value == LocalPlayer
+                        or ownerRaw == LocalPlayer.Name
+                        or ownerRaw == tostring(LocalPlayer.UserId)
+                    )
+                    local ownerText = owner and (ownerMatches and "MATCHES LOCAL PLAYER" or ownerRaw) or "Owner missing"
+                    local ownerClass = owner and owner.ClassName or "none"
                     local kind = item.ClassName
                     local parts, partCount = {}, 0
                     for _, desc in ipairs(item:GetDescendants()) do
@@ -1968,7 +1975,7 @@ makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
                         end
                     end
                     local label = item.Name .. " [" .. kind .. "] / owner: " .. ownerText
-                        .. " / parts: " .. partCount
+                        .. " [" .. ownerClass .. "] / parts: " .. partCount
                     if itemName then label = label .. " / ItemName=" .. tostring(itemName.Value) end
                     if purchased then label = label .. " / PurchasedBoxItemName=" .. tostring(purchased.Value) end
                     if typeValue then label = label .. " / Type=" .. tostring(typeValue.Value) end
@@ -1978,6 +1985,7 @@ makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
                 end
             end
         end
+        lines[#lines+1] = "Local player: " .. LocalPlayer.Name .. " / UserId: " .. tostring(LocalPlayer.UserId)
         lines[#lines+1] = "PlayerModels: " .. (playerModels and ("FOUND / " .. inspected .. " top-level items checked") or "MISSING")
         lines[#lines+1] = "Wire-like placed models: " .. #candidates
         if #candidates == 0 then
@@ -1987,6 +1995,12 @@ makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
         end
 
         -- A short, secondary list of similarly named replicated objects.
+        local placeFolder = replicated:FindFirstChild("PlaceStructure")
+        local wireRemote = placeFolder and placeFolder:FindFirstChild("ClientPlacedWire")
+        local serverBindable = placeFolder and placeFolder:FindFirstChild("ClientPlacedWireServerServer")
+        lines[#lines+1] = "ClientPlacedWire: " .. (wireRemote and wireRemote.ClassName or "MISSING")
+        lines[#lines+1] = "ClientPlacedWireServerServer: " .. (serverBindable and serverBindable.ClassName or "MISSING")
+
         local wireNamed = {}
         for _, obj in ipairs(replicated:GetDescendants()) do
             if string.lower(obj.Name):find("wire", 1, true) and obj ~= wire then
@@ -3192,4 +3206,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.28 ready. Wire Art storage scanner enabled.")
+notify("Mystics LT2 v2.29 ready. Wire Art storage scanner enabled.")
