@@ -182,3 +182,12 @@ Temporary stability note: the launcher is rolled back to the confirmed-loading v
 - Removed the owned geometry inspector and all pagination controls.
 - Retained the earlier read-only local plot proximity scan and Wire Art Studio controls.
 - Launcher pinned to LT2 commit `f7c732a7f3a3f916e168eac18058dcfde5a0a234`.
+
+
+## Emergency stability rollback — v2.24
+
+- Restored the historically confirmed-loading v2.24 LT2 module.
+- Removed later Wire storage, proximity, ownership, and geometry diagnostics from the active module.
+- Preserved the v2.24 Wire Art Studio and design/preview features present in that baseline.
+- Launcher validates and pins to LT2 commit `da70baee9a86b1aee44e6b8dd898c3d7270a0ab0`.
+- This is a compatibility rollback; test the menu before reintroducing any diagnostics.
