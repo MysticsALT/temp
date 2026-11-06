@@ -640,20 +640,26 @@ local function LaunchLT2()
                 error("This environment does not provide loadstring.")
             end
             local downloaded, source = pcall(function()
-                -- Unique URL prevents stale HTTP responses from executors.
-                local freshUrl = lt2Url .. "?fresh=" ..
-                    game:GetService("HttpService"):GenerateGUID(false)
-                return game:HttpGet(freshUrl)
+                -- Use the exact raw URL: some executors mishandle query strings on raw GitHub.
+                return game:HttpGet(lt2Url)
             end)
             if not downloaded then
                 error("LT2 GitHub download failed: " .. tostring(source))
             end
-            if type(source) ~= "string" or #source < 8000
-                or not string.find(source, "MYSTICS | LUMBER TYCOON 2 MODULE", 1, true) then
-                error("GitHub returned an unexpected or incomplete LT2 module.")
+            if type(source) ~= "string" then
+                error("LT2 download returned " .. typeof(source) .. " instead of text.")
             end
-            if not string.find(source, "V2.24 | Self-contained", 1, true) then
-                error("Old LT2 module downloaded despite loader update; cache is stale.")
+            local sourceLength = #source
+            local hasMarker = string.find(source, "MYSTICS | LUMBER TYCOON 2 MODULE", 1, true) ~= nil
+            local hasVersion = string.find(source, "V2.24 | Self-contained", 1, true) ~= nil
+            if sourceLength < 8000 then
+                error("LT2 download too short: " .. sourceLength .. " characters. Check executor HTTP response.")
+            end
+            if not hasMarker then
+                error("LT2 download missing module marker; received " .. sourceLength .. " characters. Response may be an HTML error page or truncated.")
+            end
+            if not hasVersion then
+                error("LT2 download has the module marker but not version V2.24; received " .. sourceLength .. " characters.")
             end
             local chunk, compileError = loadstring(source, "Mystics_LT2")
             if type(chunk) ~= "function" then
