@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.29 | Self-contained utility module + opt-in legacy research tests
+-- V2.24 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.29  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.24  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.29",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.24",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1773,9 +1773,11 @@ end, "cta")
 section(wireArtPage, "WIRE PLACEMENT DIAGNOSTICS",
     "Safe diagnostic only. Checks the LT2 wire template, remote and owned wire models without placing anything.")
 local WireDiagStatus = info(wireArtPage,
+    "WIRE DIAGNOSTICS / NOT RUN\nPress SCAN WIRE SETUP. This does not place or consume wires.",
+    76, "text")
 
 makeButton(wireArtPage, "SCAN REPLICATED STORAGE", function()
-    local lines = {"REPLICATED STORAGE / READ-ONLY SCAN"}
+    local lines = {"REPLICATED STORAGE / READ-ONLY"}
     local replicated = game:GetService("ReplicatedStorage")
     local direct = {}
     for _, child in ipairs(replicated:GetChildren()) do
@@ -1789,21 +1791,17 @@ makeButton(wireArtPage, "SCAN REPLICATED STORAGE", function()
         if name == "purchasables" or name == "wireobjects"
             or name == "wire" or name == "otherinfo" then
             count += 1
-            if #hits < 40 then
+            if #hits < 30 then
                 hits[#hits+1] = item:GetFullName() .. " [" .. item.ClassName .. "]"
             end
         end
     end
     lines[#lines+1] = "Matching descendants (" .. count .. "):"
     for _, hit in ipairs(hits) do lines[#lines+1] = hit end
-    if count == 0 then
-        lines[#lines+1] = "No matching names are currently replicated to this client."
-    end
-    lines[#lines+1] = "Read-only scan; no placement request was sent."
+    if count == 0 then lines[#lines+1] = "No matching names replicated to client." end
+    lines[#lines+1] = "Read-only scan. No placement request sent."
     WireDiagStatus.Text = table.concat(lines, "\n")
-end, "cta", 54)
-    "WIRE DIAGNOSTICS / NOT RUN\nPress SCAN WIRE SETUP. This does not place or consume wires.",
-    76, "text")
+end, "card")
 
 makeButton(wireArtPage, "SCAN WIRE SETUP", function()
     local lines = {"WIRE DIAGNOSTICS / RESULTS"}
@@ -3060,4 +3058,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.29 ready. Wire Art storage scanner enabled.")
+notify("Mystics LT2 v2.18 ready. Historical waypoints are unverified.")
