@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.25 | Self-contained utility module + opt-in legacy research tests
+-- V2.26 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -1910,7 +1910,7 @@ section(wireArtPage, "CLIENT ITEM INFO / WIRE INSPECTOR",
     "Read-only inspection of ClientItemInfo.Wire, its OtherInfo metadata, and matching replicated Wire models.")
 local WireItemInspectStatus = info(wireArtPage,
     "WIRE ITEM INSPECTOR / NOT RUN\nPress INSPECT CLIENT ITEM INFO. No placement request will be sent.",
-    190, "text")
+    340, "text")
 
 makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
     local lines = {"CLIENT ITEM INFO / WIRE INSPECTION"}
