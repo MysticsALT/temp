@@ -634,7 +634,7 @@ local function LaunchLT2()
         local ok, errorMessage = pcall(function()
             -- Try immutable commit first, then branch/CDN mirrors.
             -- Some executor HttpGet implementations return a short 404 body for raw commit URLs.
-            local lt2ModuleCommit = "f4f9eb1990a0781b9d64790fce1f9cf0651f65c4"
+            local lt2ModuleCommit = "5eac052ae22e8e905f681ebd4696d3d3eaaeceec"
             local expectedMarker = "MYSTICS | LUMBER TYCOON 2 MODULE"
             local expectedVersion = "V2.36 | Self-contained"
             if type(loadstring) ~= "function" then
