@@ -659,7 +659,7 @@ local function LaunchLT2()
                 error("LT2 download missing module marker; received " .. sourceLength .. " characters. Response may be an HTML error page or truncated.")
             end
             if not hasVersion then
-                error("LT2 download has the module marker but not version V2.25; received " .. sourceLength .. " characters.")
+                error("LT2 download has the module marker but not version V2.27; received " .. sourceLength .. " characters.")
             end
             local chunk, compileError = loadstring(source, "Mystics_LT2")
             if type(chunk) ~= "function" then
