@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.34 | Self-contained utility module + opt-in legacy research tests
+-- V2.35 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.34  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.35  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.34",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.35",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1476,7 +1476,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.34 • Blood Red animated interface.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.35 • Blood Red animated interface.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1960,7 +1960,19 @@ makeButton(wireArtPage, "SCAN NEAR MY PLOT", function()
             local end1 = model:FindFirstChild("End1", true)
             local end2 = model:FindFirstChild("End2", true)
             local linePart = model:FindFirstChild("Line", true)
-            local structuralWire = end1 ~= nil and end2 ~= nil and linePart ~= nil
+            local pointNames, lineNames = {}, {}
+            for _, desc in ipairs(model:GetDescendants()) do
+                if desc.Name:match("^Point%d+$") then
+                    pointNames[#pointNames+1] = desc.Name
+                elseif desc.Name:match("^Line%d+$") then
+                    lineNames[#lineNames+1] = desc.Name
+                end
+            end
+            table.sort(pointNames, function(a,b) return (tonumber(a:match("%d+")) or 0) < (tonumber(b:match("%d+")) or 0) end)
+            table.sort(lineNames, function(a,b) return (tonumber(a:match("%d+")) or 0) < (tonumber(b:match("%d+")) or 0) end)
+            local legacyStructure = end1 ~= nil and end2 ~= nil and linePart ~= nil
+            local indexedStructure = #pointNames >= 2 and #lineNames >= 1
+            local structuralWire = legacyStructure or indexedStructure
             if namedWire then stats.named += 1 end
             if structuralWire then stats.structural += 1 end
 
@@ -1994,7 +2006,11 @@ makeButton(wireArtPage, "SCAN NEAR MY PLOT", function()
                             item = itemName and tostring(itemName.Value) or "-",
                             purchased = purchased and tostring(purchased.Value) or "-",
                             typeName = typeValue and tostring(typeValue.Value) or "-",
-                            structure = structuralWire
+                            structure = structuralWire,
+                            pointNames = table.concat(pointNames, ", "),
+                            lineNames = table.concat(lineNames, ", "),
+                            structureKind = legacyStructure and "End1/End2/Line"
+                                or (indexedStructure and "indexed Point/Line segments" or "identity only")
                         }
                     end
                 end
@@ -2025,7 +2041,7 @@ makeButton(wireArtPage, "SCAN NEAR MY PLOT", function()
         lines[#lines+1] = "PlayerModels models checked: " .. stats.playerModels
         lines[#lines+1] = "Local plot models checked: " .. stats.plotModels
         lines[#lines+1] = "Wire identity matches: " .. stats.named
-        lines[#lines+1] = "End1/End2/Line structures: " .. stats.structural
+        lines[#lines+1] = "Wire structures (legacy or indexed Point/Line): " .. stats.structural
         lines[#lines+1] = "Wire-like models within 120 studs: " .. #candidates
         if #candidates == 0 then
             lines[#lines+1] = "No nearby match in PlayerModels or the local plot. The placed item may use another container or not be a Model."
@@ -2038,7 +2054,11 @@ makeButton(wireArtPage, "SCAN NEAR MY PLOT", function()
                 lines[#lines+1] = string.format("%.1f studs | %s | %s | owner %s | parts %d",
                     match.distance, match.source, match.path, match.owner, match.parts)
                 lines[#lines+1] = "  ItemName=" .. match.item .. " / PurchasedBoxItemName=" .. match.purchased .. " / Type=" .. match.typeName
-                lines[#lines+1] = "  Parts: " .. match.partNames .. " / structural=" .. tostring(match.structure)
+                lines[#lines+1] = "  Parts: " .. match.partNames .. " / structure=" .. match.structureKind
+                if match.pointNames ~= "" or match.lineNames ~= "" then
+                    lines[#lines+1] = "  Point nodes: " .. (match.pointNames ~= "" and match.pointNames or "none")
+                        .. " / Line nodes: " .. (match.lineNames ~= "" and match.lineNames or "none")
+                end
             end
         end
         lines[#lines+1] = "READ-ONLY. No placement request sent."
@@ -3423,4 +3443,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.34 ready. Wire Art storage scanner enabled.")
+notify("Mystics LT2 v2.35 ready. Wire Art storage scanner enabled.")
