@@ -632,46 +632,35 @@ local function LaunchLT2()
     SetLT2ButtonState("Downloading Lumber Tycoon 2...", false)
     task.spawn(function()
         local ok, errorMessage = pcall(function()
-            -- Try immutable commit first, then branch/CDN mirrors.
-            -- Some executor HttpGet implementations return a short 404 body for raw commit URLs.
-            local lt2ModuleCommit = "da70baee9a86b1aee44e6b8dd898c3d7270a0ab0"
-            local expectedMarker = "MYSTICS | LUMBER TYCOON 2 MODULE"
-            local expectedVersion = "V2.24 | Self-contained"
+            -- Commit-pinned loading avoids silently changing module contents.
+            local lt2ModuleCommit = "bf1696d9e6d5f50c5ee7776e559a2d1c400475f5"
+            local lt2Url = "https://raw.githubusercontent.com/MysticsALT/temp/"
+                .. lt2ModuleCommit .. "/LT2.lua"
             if type(loadstring) ~= "function" then
                 error("This environment does not provide loadstring.")
             end
-
-            local urls = {
-                "https://raw.githubusercontent.com/MysticsALT/temp/" .. lt2ModuleCommit .. "/LT2.lua",
-                "https://raw.githubusercontent.com/MysticsALT/temp/main/LT2.lua",
-                "https://cdn.jsdelivr.net/gh/MysticsALT/temp@main/LT2.lua"
-            }
-            local source = nil
-            local downloadErrors = {}
-            for _, url in ipairs(urls) do
-                local ok, response = pcall(function()
-                    return game:HttpGet(url)
-                end)
-                if ok and type(response) == "string" then
-                    local valid = #response > 8000
-                        and string.find(response, expectedMarker, 1, true) ~= nil
-                        and string.find(response, expectedVersion, 1, true) ~= nil
-                    if valid then
-                        source = response
-                        break
-                    end
-                    downloadErrors[#downloadErrors + 1] = url .. " returned " .. #response
-                        .. " chars; marker=" .. tostring(string.find(response, expectedMarker, 1, true) ~= nil)
-                        .. "; version=" .. tostring(string.find(response, expectedVersion, 1, true) ~= nil)
-                        .. "; preview=" .. string.sub(response, 1, 80)
-                else
-                    downloadErrors[#downloadErrors + 1] = url .. " failed: " .. tostring(response)
-                end
+            local downloaded, source = pcall(function()
+                -- Use the exact raw URL: some executors mishandle query strings on raw GitHub.
+                return game:HttpGet(lt2Url)
+            end)
+            if not downloaded then
+                error("LT2 GitHub download failed: " .. tostring(source))
             end
-            if not source then
-                error("All LT2 download sources failed. " .. table.concat(downloadErrors, " | "))
+            if type(source) ~= "string" then
+                error("LT2 download returned " .. typeof(source) .. " instead of text.")
             end
-
+            local sourceLength = #source
+            local hasMarker = string.find(source, "MYSTICS | LUMBER TYCOON 2 MODULE", 1, true) ~= nil
+            local hasVersion = string.find(source, "V2.24 | Self-contained", 1, true) ~= nil
+            if sourceLength < 8000 then
+                error("LT2 download too short: " .. sourceLength .. " characters. Check executor HTTP response.")
+            end
+            if not hasMarker then
+                error("LT2 download missing module marker; received " .. sourceLength .. " characters. Response may be an HTML error page or truncated.")
+            end
+            if not hasVersion then
+                error("LT2 download has the module marker but not version V2.24; received " .. sourceLength .. " characters.")
+            end
             local chunk, compileError = loadstring(source, "Mystics_LT2")
             if type(chunk) ~= "function" then
                 error("LT2 compile error: " .. tostring(compileError))
