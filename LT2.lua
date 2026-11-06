@@ -1652,6 +1652,33 @@ makeButton(wireArtPage, "CLEAR PREVIEW", function()
     clearWireArtPreview()
     WireArtStatus.Text = "WIRE ART / PREVIEW CLEARED"
 end, "quiet")
+makeButton(wireArtPage, "SCAN REPLICATED STORAGE", function()
+    local lines = {"REPLICATED STORAGE / READ-ONLY"}
+    local replicated = game:GetService("ReplicatedStorage")
+    local direct = {}
+    for _, child in ipairs(replicated:GetChildren()) do
+        direct[#direct+1] = child.Name .. " [" .. child.ClassName .. "]"
+    end
+    lines[#lines+1] = "Top-level: " ..
+        (#direct > 0 and table.concat(direct, ", ") or "(none)")
+    local hits, count = {}, 0
+    for _, item in ipairs(replicated:GetDescendants()) do
+        local name = string.lower(item.Name)
+        if name == "purchasables" or name == "wireobjects"
+            or name == "wire" or name == "otherinfo" then
+            count += 1
+            if #hits < 30 then
+                hits[#hits+1] = item:GetFullName() .. " [" .. item.ClassName .. "]"
+            end
+        end
+    end
+    lines[#lines+1] = "Matching descendants (" .. count .. "):"
+    for _, hit in ipairs(hits) do lines[#lines+1] = hit end
+    if count == 0 then lines[#lines+1] = "No matching names replicated to client." end
+    lines[#lines+1] = "Read-only scan. No placement request sent."
+    WireDiagStatus.Text = table.concat(lines, "\n")
+end, "card")
+
 makeButton(wireArtPage, "VALIDATE WIRE ART DATA", function()
     local paths, err = decodeWireArt()
     if not paths then WireArtStatus.Text = "WIRE ART / " .. err; return end
@@ -1775,33 +1802,6 @@ section(wireArtPage, "WIRE PLACEMENT DIAGNOSTICS",
 local WireDiagStatus = info(wireArtPage,
     "WIRE DIAGNOSTICS / NOT RUN\nPress SCAN WIRE SETUP. This does not place or consume wires.",
     76, "text")
-
-makeButton(wireArtPage, "SCAN REPLICATED STORAGE", function()
-    local lines = {"REPLICATED STORAGE / READ-ONLY"}
-    local replicated = game:GetService("ReplicatedStorage")
-    local direct = {}
-    for _, child in ipairs(replicated:GetChildren()) do
-        direct[#direct+1] = child.Name .. " [" .. child.ClassName .. "]"
-    end
-    lines[#lines+1] = "Top-level: " ..
-        (#direct > 0 and table.concat(direct, ", ") or "(none)")
-    local hits, count = {}, 0
-    for _, item in ipairs(replicated:GetDescendants()) do
-        local name = string.lower(item.Name)
-        if name == "purchasables" or name == "wireobjects"
-            or name == "wire" or name == "otherinfo" then
-            count += 1
-            if #hits < 30 then
-                hits[#hits+1] = item:GetFullName() .. " [" .. item.ClassName .. "]"
-            end
-        end
-    end
-    lines[#lines+1] = "Matching descendants (" .. count .. "):"
-    for _, hit in ipairs(hits) do lines[#lines+1] = hit end
-    if count == 0 then lines[#lines+1] = "No matching names replicated to client." end
-    lines[#lines+1] = "Read-only scan. No placement request sent."
-    WireDiagStatus.Text = table.concat(lines, "\n")
-end, "card")
 
 makeButton(wireArtPage, "SCAN WIRE SETUP", function()
     local lines = {"WIRE DIAGNOSTICS / RESULTS"}
@@ -3058,4 +3058,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.18 ready. Historical waypoints are unverified.")
+notify("Mystics LT2 v2.24 ready. Wire Art storage scanner enabled.")
