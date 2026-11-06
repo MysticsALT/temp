@@ -1654,33 +1654,56 @@ makeButton(wireArtPage, "CLEAR PREVIEW", function()
 end, "quiet")
 makeButton(wireArtPage, "SCAN REPLICATED STORAGE", function()
     local ok, result = pcall(function()
-        local lines = {"REPLICATED STORAGE / READ-ONLY"}
+        local lines = {"WIRE TEMPLATE METADATA / READ-ONLY"}
         local replicated = game:GetService("ReplicatedStorage")
-        local direct = {}
-        for _, child in ipairs(replicated:GetChildren()) do
-            direct[#direct+1] = child.Name .. " [" .. child.ClassName .. "]"
-        end
-        lines[#lines+1] = "Top-level: " ..
-            (#direct > 0 and table.concat(direct, ", ") or "(none)")
-        local hits, count = {}, 0
-        for _, item in ipairs(replicated:GetDescendants()) do
-            local name = string.lower(item.Name)
-            if name == "purchasables" or name == "wireobjects"
-                or name == "wire" or name == "otherinfo" then
-                count += 1
-                if #hits < 30 then
-                    hits[#hits+1] = item:GetFullName() .. " [" .. item.ClassName .. "]"
+        local clientInfo = replicated:FindFirstChild("ClientItemInfo")
+        local wireInfo = clientInfo and clientInfo:FindFirstChild("Wire")
+        if not clientInfo then
+            lines[#lines+1] = "ClientItemInfo: MISSING"
+        elseif not wireInfo then
+            lines[#lines+1] = "ClientItemInfo found; Wire child: MISSING"
+        else
+            lines[#lines+1] = "Wire path: " .. wireInfo:GetFullName()
+            lines[#lines+1] = "Wire class: " .. wireInfo.ClassName
+            local function describe(container, label)
+                lines[#lines+1] = label .. " children:"
+                local children = container:GetChildren()
+                if #children == 0 then lines[#lines+1] = "  (none)" end
+                for index, child in ipairs(children) do
+                    if index > 60 then
+                        lines[#lines+1] = "  ... child list truncated"
+                        break
+                    end
+                    local entry = "  " .. child.Name .. " [" .. child.ClassName .. "]"
+                    if child:IsA("ValueBase") then
+                        local valueOk, value = pcall(function() return tostring(child.Value) end)
+                        if valueOk then entry = entry .. " = " .. value end
+                    end
+                    lines[#lines+1] = entry
+                    local attrs = child:GetAttributes()
+                    for key, value in pairs(attrs) do
+                        lines[#lines+1] = "    Attribute " .. key .. " = " .. tostring(value)
+                    end
                 end
             end
+            describe(wireInfo, "Wire")
+            local other = wireInfo:FindFirstChild("OtherInfo")
+            if other then
+                lines[#lines+1] = "OtherInfo path: " .. other:GetFullName()
+                describe(other, "OtherInfo")
+            else
+                lines[#lines+1] = "Wire.OtherInfo: MISSING"
+            end
+            local maxLength = other and other:FindFirstChild("MaxLength")
+            if maxLength and maxLength:IsA("ValueBase") then
+                lines[#lines+1] = "MaxLength value: " .. tostring(maxLength.Value)
+            else
+                lines[#lines+1] = "MaxLength value object: not found"
+            end
         end
-        lines[#lines+1] = "Matching descendants (" .. count .. "):"
-        for _, hit in ipairs(hits) do lines[#lines+1] = hit end
-        if count == 0 then lines[#lines+1] = "No matching names replicated to client." end
-        lines[#lines+1] = "Read-only scan. No placement request sent."
+        lines[#lines+1] = "Read-only inspection. No placement request sent."
         return table.concat(lines, "\n")
     end)
-    -- Deliberately use console output rather than any GUI TextLabel reference.
-    -- This isolates the scan from nil/stale UI label errors.
     if ok then
         print("[Mystics Wire Art Scan]\n" .. result)
     else
