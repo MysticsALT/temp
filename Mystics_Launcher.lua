@@ -634,9 +634,9 @@ local function LaunchLT2()
         local ok, errorMessage = pcall(function()
             -- Try immutable commit first, then branch/CDN mirrors.
             -- Some executor HttpGet implementations return a short 404 body for raw commit URLs.
-            local lt2ModuleCommit = "093e9f011adcd3b52ac7427b1d300b173c59aa29"
+            local lt2ModuleCommit = "2c72434f99d3701e7ff6061c49c3409d2cf6f93c"
             local expectedMarker = "MYSTICS | LUMBER TYCOON 2 MODULE"
-            local expectedVersion = "V2.34 | Self-contained"
+            local expectedVersion = "V2.35 | Self-contained"
             if type(loadstring) ~= "function" then
                 error("This environment does not provide loadstring.")
             end
