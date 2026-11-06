@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.24 | Self-contained utility module + opt-in legacy research tests
+-- V2.25 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.24  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.25  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.24",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.25",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1900,6 +1900,118 @@ makeButton(wireArtPage, "SCAN WIRE SETUP", function()
     WireDiagStatus.Text = table.concat(lines, "\n")
 end, "card")
 
+
+--========================================================
+-- CLIENT ITEM INFO / WIRE INSPECTOR (READ-ONLY)
+-- Inspects the path actually observed in the user's storage scan.
+-- This does not invoke remotes, move objects, or consume items.
+--========================================================
+section(wireArtPage, "CLIENT ITEM INFO / WIRE INSPECTOR",
+    "Read-only inspection of ClientItemInfo.Wire, its OtherInfo metadata, and matching replicated Wire models.")
+local WireItemInspectStatus = info(wireArtPage,
+    "WIRE ITEM INSPECTOR / NOT RUN\\nPress INSPECT CLIENT ITEM INFO. No placement request will be sent.",
+    190, "text")
+
+makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
+    local lines = {"CLIENT ITEM INFO / WIRE INSPECTION"}
+    local ok, err = pcall(function()
+        local replicated = game:GetService("ReplicatedStorage")
+        local clientInfo = replicated:FindFirstChild("ClientItemInfo")
+        local wire = clientInfo and clientInfo:FindFirstChild("Wire")
+        local otherInfo = wire and wire:FindFirstChild("OtherInfo")
+
+        lines[#lines+1] = "ClientItemInfo: " ..
+            (clientInfo and (clientInfo:GetFullName() .. " [" .. clientInfo.ClassName .. "]") or "MISSING")
+        lines[#lines+1] = "Wire entry: " ..
+            (wire and (wire:GetFullName() .. " [" .. wire.ClassName .. "]") or "MISSING")
+        lines[#lines+1] = "Wire.OtherInfo: " ..
+            (otherInfo and (otherInfo:GetFullName() .. " [" .. otherInfo.ClassName .. "]") or "MISSING")
+
+        local function describeValue(obj)
+            if obj:IsA("ValueBase") then
+                local okValue, value = pcall(function() return tostring(obj.Value) end)
+                if okValue then return " = " .. string.sub(value, 1, 100) end
+            end
+            return ""
+        end
+
+        if wire then
+            local direct = {}
+            for _, child in ipairs(wire:GetChildren()) do
+                direct[#direct+1] = child.Name .. " [" .. child.ClassName .. "]" .. describeValue(child)
+            end
+            lines[#lines+1] = "Wire direct children (" .. #direct .. "):"
+            for i=1, math.min(#direct, 18) do lines[#lines+1] = "  " .. direct[i] end
+            if #direct > 18 then lines[#lines+1] = "  ...more direct children omitted" end
+
+            if otherInfo then
+                local metadata = {}
+                for _, child in ipairs(otherInfo:GetChildren()) do
+                    metadata[#metadata+1] = child.Name .. " [" .. child.ClassName .. "]" .. describeValue(child)
+                end
+                lines[#lines+1] = "OtherInfo fields (" .. #metadata .. "):"
+                for i=1, math.min(#metadata, 25) do lines[#lines+1] = "  " .. metadata[i] end
+                if #metadata > 25 then lines[#lines+1] = "  ...more metadata fields omitted" end
+            end
+
+            local descendants, seen = {}, 0
+            for _, child in ipairs(wire:GetDescendants()) do
+                seen += 1
+                if #descendants < 35 then
+                    local relative = child:GetFullName():gsub("^" .. wire:GetFullName() .. "%.", "")
+                    descendants[#descendants+1] = relative .. " [" .. child.ClassName .. "]" .. describeValue(child)
+                end
+            end
+            lines[#lines+1] = "Nested Wire descendants: " .. seen
+            for _, entry in ipairs(descendants) do lines[#lines+1] = "  " .. entry end
+            if seen > #descendants then lines[#lines+1] = "  ...descendant list capped at 35" end
+        end
+
+        local wireNamed = {}
+        for _, obj in ipairs(replicated:GetDescendants()) do
+            local lower = string.lower(obj.Name)
+            if lower:find("wire", 1, true) and obj ~= wire then
+                wireNamed[#wireNamed+1] = obj:GetFullName() .. " [" .. obj.ClassName .. "]"
+                if #wireNamed >= 30 then break end
+            end
+        end
+        lines[#lines+1] = "Other replicated Wire-named objects (up to 30):"
+        if #wireNamed == 0 then lines[#lines+1] = "  None found"
+        else
+            for _, entry in ipairs(wireNamed) do lines[#lines+1] = "  " .. entry end
+        end
+
+        local playerModels = Workspace:FindFirstChild("PlayerModels")
+        local candidates = {}
+        if playerModels then
+            for _, model in ipairs(playerModels:GetChildren()) do
+                if model:IsA("Model") then
+                    local owner = model:FindFirstChild("Owner")
+                    local itemName = model:FindFirstChild("ItemName")
+                    local purchased = model:FindFirstChild("PurchasedBoxItemName")
+                    local typeValue = model:FindFirstChild("Type")
+                    local identity = string.lower(model.Name)
+                    local isWire = identity:find("wire", 1, true) ~= nil
+                        or (itemName and string.lower(tostring(itemName.Value)):find("wire", 1, true) ~= nil)
+                        or (purchased and string.lower(tostring(purchased.Value)):find("wire", 1, true) ~= nil)
+                        or (typeValue and string.lower(tostring(typeValue.Value)):find("wire", 1, true) ~= nil)
+                    if isWire then
+                        local ownerText = owner and (owner.Value == LocalPlayer and "LOCAL PLAYER" or tostring(owner.Value)) or "Owner value missing"
+                        candidates[#candidates+1] = model.Name .. " / owner: " .. ownerText
+                        if #candidates >= 12 then break end
+                    end
+                end
+            end
+        end
+        lines[#lines+1] = "Wire-like PlayerModels (up to 12):"
+        if #candidates == 0 then lines[#lines+1] = "  None detected"
+        else for _, entry in ipairs(candidates) do lines[#lines+1] = "  " .. entry end end
+        lines[#lines+1] = "READ-ONLY INSPECTION. No placement request sent."
+    end)
+    if not ok then lines[#lines+1] = "Inspector error: " .. tostring(err) end
+    WireItemInspectStatus.Text = table.concat(lines, "\\n")
+end, "card")
+
 local buildPage = toolkit
 local toolkitHighlights = {}
 local toolkitSettingsFile = "MysticsLT2_Settings.json"
@@ -3090,4 +3202,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.24 ready. Wire Art storage scanner enabled.")
+notify("Mystics LT2 v2.25 ready. Wire Art storage scanner enabled.")
