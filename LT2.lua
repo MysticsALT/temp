@@ -1529,11 +1529,6 @@ local wireArtPreviewFrame = nil
 local wireArtPreviewPaths = nil
 local wireArtPreviewWidth = nil
 local wireArtPreviewHeight = nil
-local wireArtPlacementMode = "TWO_ARGUMENT"
-local wireArtVerifiedMode = nil
-local wireArtVerifiedFrame = nil
-local wireArtBusy = false
-
 
 local function clearWireArtPreview()
     for _, part in ipairs(wireArtPreviewParts) do
@@ -1544,8 +1539,6 @@ local function clearWireArtPreview()
     wireArtPreviewPaths = nil
     wireArtPreviewWidth = nil
     wireArtPreviewHeight = nil
-    wireArtVerifiedMode = nil
-    wireArtVerifiedFrame = nil
 end
 State.clearWireArtPreview = clearWireArtPreview
 
@@ -1666,273 +1659,166 @@ makeButton(toolkit, "VALIDATE WIRE ART DATA", function()
     WireArtStatus.Text = "WIRE ART / DATA VALID\n" .. #paths .. " wire strokes / " .. points .. " points"
 end, "card")
 
--- Wire placement compatibility: legacy two-argument and newer five-argument
--- signatures are both documented in public LT2 scripts. Test only one wire
--- before allowing bulk placement, and require a replicated wire as evidence.
-local wireModeButton
-wireModeButton = makeButton(toolkit, "PLACEMENT MODE: TWO ARGUMENTS", function()
-    if wireArtBusy then return end
-    if wireArtPlacementMode == "TWO_ARGUMENT" then
-        wireArtPlacementMode = "FIVE_ARGUMENT"
-    else
-        wireArtPlacementMode = "TWO_ARGUMENT"
+local wireArtPlacing = false
+makeButton(toolkit, "CONFIRM & PLACE PREVIEW", function()
+    if wireArtPlacing then
+        WireArtStatus.Text = "WIRE ART / PLACEMENT ALREADY RUNNING"
+        return
     end
-    wireArtVerifiedMode = nil
-    wireArtVerifiedFrame = nil
-    wireModeButton.Text = "PLACEMENT MODE: " ..
-        (wireArtPlacementMode == "TWO_ARGUMENT" and "TWO ARGUMENTS" or "FIVE ARGUMENTS")
-    WireArtStatus.Text = "WIRE ART / MODE CHANGED\nRun a test wire before building."
-end, "card")
-
-local function getWirePlacementRemote()
+    if not wireArtPreviewFrame or not wireArtPreviewPaths then
+        WireArtStatus.Text = "WIRE ART / PREVIEW FIRST\nLoad a preset or update the preview before confirming."
+        return
+    end
     local replicated = game:GetService("ReplicatedStorage")
     local placeFolder = replicated:FindFirstChild("PlaceStructure")
     local remote = placeFolder and placeFolder:FindFirstChild("ClientPlacedWire")
     local purchasables = replicated:FindFirstChild("Purchasables")
     local wireFolder = purchasables and purchasables:FindFirstChild("WireObjects")
     local wireInfo = wireFolder and wireFolder:FindFirstChild("Wire")
-    if not wireInfo and purchasables then wireInfo = purchasables:FindFirstChild("Wire", true) end
+    if not wireInfo and purchasables then
+        wireInfo = purchasables:FindFirstChild("Wire", true)
+    end
     if not remote or not remote:IsA("RemoteEvent") or not wireInfo then
-        return nil, nil, "ClientPlacedWire RemoteEvent or Wire template is missing"
-    end
-    return remote, wireInfo
-end
-
-local function findAvailableWireModels()
-    local results, playerModels = {}, Workspace:FindFirstChild("PlayerModels")
-    if not playerModels then return results end
-    for _, item in ipairs(playerModels:GetChildren()) do
-        if item:IsA("Model") then
-            local owner = item:FindFirstChild("Owner")
-            local itemName = item:FindFirstChild("ItemName")
-            local purchased = item:FindFirstChild("PurchasedBoxItemName")
-            local typeValue = item:FindFirstChild("Type")
-            local isWire = item.Name == "Wire"
-                or (itemName and tostring(itemName.Value) == "Wire")
-                or (purchased and tostring(purchased.Value) == "Wire")
-                or (typeValue and tostring(typeValue.Value) == "Wire")
-            if owner and owner:IsA("ObjectValue") and owner.Value == LocalPlayer and isWire then
-                results[#results+1] = item
-            end
-        end
-    end
-    return results
-end
-
-local function placedWireSnapshot()
-    local existing = {}
-    local root = Workspace:FindFirstChild("PlayerModels")
-    if not root then return existing end
-    for _, model in ipairs(root:GetChildren()) do
-        if model:IsA("Model") and model:FindFirstChild("End1") and model:FindFirstChild("End2") then
-            local t = model:FindFirstChild("Type")
-            local owner = model:FindFirstChild("Owner")
-            if t and tostring(t.Value) == "Wire" and owner and owner.Value == LocalPlayer then
-                existing[model] = true
-            end
-        end
-    end
-    return existing
-end
-
-local function wireEndpointPosition(item)
-    if not item then return nil end
-    if item:IsA("BasePart") then return item.Position end
-    if item:IsA("Attachment") then return item.WorldPosition end
-    return nil
-end
-
-local function detectNewPlacedWire(before, points, seconds)
-    local limit = os.clock() + seconds
-    while os.clock() < limit and not State.closed do
-        local root = Workspace:FindFirstChild("PlayerModels")
-        if root then
-            for _, model in ipairs(root:GetChildren()) do
-                if model:IsA("Model") and not before[model] then
-                    local typ = model:FindFirstChild("Type")
-                    local owner = model:FindFirstChild("Owner")
-                    local a = wireEndpointPosition(model:FindFirstChild("End1"))
-                    local b = wireEndpointPosition(model:FindFirstChild("End2"))
-                    if typ and tostring(typ.Value) == "Wire"
-                        and owner and owner.Value == LocalPlayer and a and b then
-                        local normal = (a - points[1]).Magnitude < 3
-                            and (b - points[#points]).Magnitude < 3
-                        local reversed = (b - points[1]).Magnitude < 3
-                            and (a - points[#points]).Magnitude < 3
-                        if normal or reversed then return model end
-                    end
-                end
-            end
-        end
-        task.wait(0.25)
-    end
-    return nil
-end
-
-local function fireWirePlacement(remote, wireInfo, points, mode, inventoryModel)
-    if mode == "TWO_ARGUMENT" then
-        return pcall(function() remote:FireServer(wireInfo, points) end)
-    end
-    if not inventoryModel or not inventoryModel.Parent then
-        return false, "No owned Wire model available for five-argument mode"
-    end
-    return pcall(function()
-        remote:FireServer(wireInfo, points, LocalPlayer, inventoryModel, true)
-    end)
-end
-
-local function wireWorldPaths()
-    local paths = {}
-    for _, path in ipairs(wireArtPreviewPaths or {}) do
-        local points = {}
-        for _, pair in ipairs(path) do
-            points[#points+1] = wireArtWorldPoint(wireArtPreviewFrame, pair,
-                wireArtPreviewWidth, wireArtPreviewHeight)
-        end
-        paths[#paths+1] = points
-    end
-    return paths
-end
-
--- Some wire paths are too long to place as a single wire. Split at a
--- configurable conservative length and cap point count per wire.
-local function splitWireStrokes(paths)
-    local result = {}
-    for _, path in ipairs(paths) do
-        local current = {path[1]}
-        local length = 0
-        for i=2,#path do
-            local a, b = path[i-1], path[i]
-            local vector = b-a
-            local distance = vector.Magnitude
-            if distance > 0.001 then
-                local cursor = a
-                while (b-cursor).Magnitude > 0.001 do
-                    local remainder = (b-cursor).Magnitude
-                    local available = math.max(0.05, 9-length)
-                    local step = math.min(available, remainder)
-                    local nextPos = cursor + (b-cursor).Unit*step
-                    current[#current+1] = nextPos
-                    length += step
-                    cursor = nextPos
-                    if length >= 8.999 or #current >= 20 then
-                        if #current >= 2 then result[#result+1] = current end
-                        current = {cursor}
-                        length = 0
-                    end
-                end
-            end
-        end
-        if #current >= 2 then result[#result+1] = current end
-    end
-    return result
-end
-
-makeButton(toolkit, "TEST ONE WIRE / VERIFY SERVER", function()
-    if wireArtBusy then WireArtStatus.Text = "WIRE ART / BUSY"; return end
-    if not wireArtPreviewFrame or not wireArtPreviewPaths then
-        WireArtStatus.Text = "WIRE ART / PREVIEW THE ART FIRST"; return
-    end
-    local remote, infoObj, err = getWirePlacementRemote()
-    if not remote then WireArtStatus.Text = "WIRE ART / " .. err; return end
-    local inventory = findAvailableWireModels()
-    if wireArtPlacementMode == "FIVE_ARGUMENT" and #inventory < 1 then
-        WireArtStatus.Text = "WIRE ART / NO OWNED WIRE MODEL FOUND FOR TEST"; return
-    end
-    -- Place a short, visibly offset probe at the side of the artwork.
-    -- Testing consumes a real placement if the game accepts it.
-    local frame = wireArtPreviewFrame
-    local testCenter = frame.Position + frame.RightVector * (wireArtPreviewWidth/2 + 1.5)
-    local testPoints = {testCenter, testCenter + frame.RightVector*0.6}
-    local before = placedWireSnapshot()
-    local chosenMode = wireArtPlacementMode
-    wireArtBusy = true
-    wireArtVerifiedMode, wireArtVerifiedFrame = nil, nil
-    WireArtStatus.Text = "WIRE ART / TESTING " .. chosenMode .. "\nMay place one small permanent wire."
-    task.spawn(function()
-        local ok, callError = fireWirePlacement(remote, infoObj, testPoints,
-            chosenMode, inventory[1])
-        if not ok then
-            WireArtStatus.Text = "WIRE ART / TEST REMOTE ERROR: " .. tostring(callError)
-        else
-            local confirmed = detectNewPlacedWire(before, testPoints, 7)
-            if confirmed and not State.closed and wireArtPreviewFrame == frame
-                and wireArtPlacementMode == chosenMode then
-                wireArtVerifiedMode = chosenMode
-                wireArtVerifiedFrame = frame
-                WireArtStatus.Text = "WIRE ART / TEST VERIFIED\n"
-                    .. chosenMode .. " created an owned wire. Confirm to build."
-            elseif not State.closed then
-                WireArtStatus.Text = "WIRE ART / TEST UNCONFIRMED\n"
-                    .. "No matching owned wire replicated. Try the other mode; "
-                    .. "do not bulk-place yet."
-            end
-        end
-        wireArtBusy = false
-    end)
-end, "card")
-
-makeButton(toolkit, "CONFIRM & PLACE PREVIEW", function()
-    if wireArtBusy then WireArtStatus.Text = "WIRE ART / PLACEMENT ALREADY RUNNING"; return end
-    if not wireArtPreviewFrame or not wireArtPreviewPaths then
-        WireArtStatus.Text = "WIRE ART / PREVIEW FIRST"; return
-    end
-    if wireArtVerifiedMode ~= wireArtPlacementMode
-        or wireArtVerifiedFrame ~= wireArtPreviewFrame then
-        WireArtStatus.Text = "WIRE ART / TEST REQUIRED\n"
-            .. "Run TEST ONE WIRE and verify the server before constructing."
+        WireArtStatus.Text = "WIRE ART / LT2 WIRE PLACEMENT DATA NOT AVAILABLE"
         return
     end
-    local remote, infoObj, err = getWirePlacementRemote()
-    if not remote then WireArtStatus.Text = "WIRE ART / " .. err; return end
-    local strokes = splitWireStrokes(wireWorldPaths())
-    if #strokes == 0 then WireArtStatus.Text = "WIRE ART / NO PLACEMENT PATHS"; return end
-    local inventory = findAvailableWireModels()
-    if wireArtPlacementMode == "FIVE_ARGUMENT" and #inventory < #strokes then
-        WireArtStatus.Text = "WIRE ART / " .. #strokes .. " WIRE ITEMS NEEDED\n"
-            .. "Found " .. #inventory .. ". Obtain more wire before confirming."
+
+    -- LT2 purchased items are normally spawned under Workspace.PlayerModels,
+    -- not inside Backpack/Character. Match only models owned by this player.
+    local character = LocalPlayer.Character
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local playerModels = Workspace:FindFirstChild("PlayerModels")
+    local wireItems, seen = {}, {}
+    local function isOwnedWire(item)
+        if not item:IsA("Model") and not item:IsA("Tool") then return false end
+        local owner = item:FindFirstChild("Owner")
+        if not owner or owner.Value ~= LocalPlayer then return false end
+        local purchasedName = item:FindFirstChild("PurchasedBoxItemName")
+        local itemName = item:FindFirstChild("ItemName")
+        return item.Name == "Wire"
+            or (purchasedName and tostring(purchasedName.Value) == "Wire")
+            or (itemName and tostring(itemName.Value) == "Wire")
+    end
+    local function collectOwnedWires(container)
+        if not container then return end
+        for _, item in ipairs(container:GetChildren()) do
+            if isOwnedWire(item) and not seen[item] then
+                seen[item] = true
+                wireItems[#wireItems+1] = item
+            end
+        end
+        -- Also allow a Wire tool nested in an inventory container.
+        for _, item in ipairs(container:GetDescendants()) do
+            if item ~= container and isOwnedWire(item) and not seen[item] then
+                seen[item] = true
+                wireItems[#wireItems+1] = item
+            end
+        end
+    end
+    collectOwnedWires(playerModels)
+    collectOwnedWires(backpack)
+    collectOwnedWires(character)
+    local paths, frame = wireArtPreviewPaths, wireArtPreviewFrame
+    local width, height = wireArtPreviewWidth, wireArtPreviewHeight
+    if #wireItems < #paths then
+        WireArtStatus.Text = "WIRE ART / NOT ENOUGH OWNED LT2 WIRES\nNEED: " .. #paths
+            .. "  •  FOUND: " .. #wireItems
+            .. "\nBuy or collect " .. (#paths - #wireItems) .. " more Wire items, then confirm again."
         return
     end
-    local mode = wireArtPlacementMode
-    wireArtBusy = true
-    WireArtStatus.Text = "WIRE ART / CONSTRUCTING " .. #strokes .. " WIRES"
+    wireArtPlacing = true
+    WireArtStatus.Text = "WIRE ART / CONSTRUCTING WITH " .. #paths .. " LT2 WIRES"
     task.spawn(function()
-        local confirmed, uncertain, errors = 0, 0, 0
-        local alreadySeen = placedWireSnapshot()
-        for i, points in ipairs(strokes) do
+        local sent, failed = 0, 0
+        for index, path in ipairs(paths) do
             if State.closed then break end
-            local ok, callError = fireWirePlacement(remote, infoObj, points,
-                mode, inventory[i])
-            if not ok then
-                errors += 1
-                warn("[Mystics Wire Art] Wire " .. i .. ": " .. tostring(callError))
-            else
-                local model = detectNewPlacedWire(alreadySeen, points, 4)
-                if model then
-                    confirmed += 1
-                    alreadySeen[model] = true
-                else
-                    uncertain += 1
-                    -- Avoid submitting additional wires if the server stops
-                    -- accepting them, instead of falsely reporting success.
-                    WireArtStatus.Text = "WIRE ART / UNCONFIRMED AT " .. i .. "/" .. #strokes
-                    break
+            local worldPoints = {}
+            for _, pair in ipairs(path) do
+                worldPoints[#worldPoints+1] = wireArtWorldPoint(frame, pair, width, height)
+            end
+            if #worldPoints >= 2 then
+                -- LT2 wire placement signature used by existing scripts:
+                -- wire info, point list, local player, inventory wire item, placement flag.
+                local ok, err = pcall(function()
+                    remote:FireServer(wireInfo, worldPoints, LocalPlayer, wireItems[index], true)
+                end)
+                if ok then sent += 1 else
+                    failed += 1
+                    WireArtStatus.Text = "WIRE ART / PLACEMENT ERROR: " .. tostring(err)
                 end
+            else
+                failed += 1
             end
             if not State.closed then
-                WireArtStatus.Text = "WIRE ART / " .. i .. "/" .. #strokes
-                    .. "\nVERIFIED " .. confirmed .. " / ERRORS " .. errors
+                WireArtStatus.Text = "WIRE ART / SENDING " .. index .. " OF " .. #paths
+                    .. "\nLT2 wires requested: " .. sent .. "  •  Errors: " .. failed
             end
-            task.wait(0.35)
+            task.wait(0.3)
         end
-        wireArtBusy = false
+        wireArtPlacing = false
         if not State.closed then
-            WireArtStatus.Text = "WIRE ART / " .. confirmed .. " SERVER-VERIFIED WIRES"
-                .. "\nUNCERTAIN " .. uncertain .. " / ERRORS " .. errors
-                .. "\nCheck placed wires before retrying to avoid duplicates."
+            WireArtStatus.Text = "WIRE ART / PLACEMENT REQUESTS SENT: " .. sent
+                .. "\nERRORS: " .. failed
+                .. "\nCheck your plot: the game server decides whether each wire is accepted."
         end
     end)
 end, "cta")
+
+
+--========================================================
+-- WIRE PLACEMENT DIAGNOSTICS (SAFE INCREMENTAL BUILD)
+-- This stage only inspects replicated objects; it sends no remotes.
+--========================================================
+section(toolkit, "WIRE PLACEMENT DIAGNOSTICS",
+    "Safe diagnostic only. Checks the LT2 wire template, remote and owned wire models without placing anything.")
+local WireDiagStatus = info(toolkit,
+    "WIRE DIAGNOSTICS / NOT RUN\nPress SCAN WIRE SETUP. This does not place or consume wires.",
+    76, "text")
+
+makeButton(toolkit, "SCAN WIRE SETUP", function()
+    local lines = {"WIRE DIAGNOSTICS / RESULTS"}
+    local ok, err = pcall(function()
+        local replicated = game:GetService("ReplicatedStorage")
+        local placeFolder = replicated:FindFirstChild("PlaceStructure")
+        local remote = placeFolder and placeFolder:FindFirstChild("ClientPlacedWire")
+        local purchasables = replicated:FindFirstChild("Purchasables")
+        local wireObjects = purchasables and purchasables:FindFirstChild("WireObjects")
+        local wireTemplate = wireObjects and wireObjects:FindFirstChild("Wire")
+        if not wireTemplate and purchasables then
+            wireTemplate = purchasables:FindFirstChild("Wire", true)
+        end
+        lines[#lines+1] = "Remote: " ..
+            (remote and remote:IsA("RemoteEvent") and "FOUND (RemoteEvent)" or "MISSING / WRONG TYPE")
+        lines[#lines+1] = "Wire template: " ..
+            (wireTemplate and (wireTemplate:GetFullName() .. " [" .. wireTemplate.ClassName .. "]") or "MISSING")
+        local playerModels = Workspace:FindFirstChild("PlayerModels")
+        local count, unowned = 0, 0
+        if playerModels then
+            for _, model in ipairs(playerModels:GetChildren()) do
+                if model:IsA("Model") then
+                    local owner = model:FindFirstChild("Owner")
+                    local itemName = model:FindFirstChild("ItemName")
+                    local purchased = model:FindFirstChild("PurchasedBoxItemName")
+                    local typeValue = model:FindFirstChild("Type")
+                    local isWire = model.Name == "Wire"
+                        or (itemName and tostring(itemName.Value) == "Wire")
+                        or (purchased and tostring(purchased.Value) == "Wire")
+                        or (typeValue and tostring(typeValue.Value) == "Wire")
+                    if isWire then
+                        if owner and owner.Value == LocalPlayer then count += 1
+                        else unowned += 1 end
+                    end
+                end
+            end
+        end
+        lines[#lines+1] = "Owned Wire models: " .. count
+        lines[#lines+1] = "Other Wire models: " .. unowned
+        lines[#lines+1] = "PlayerModels folder: " .. (playerModels and "FOUND" or "MISSING")
+        lines[#lines+1] = "No placement request was sent."
+    end)
+    if not ok then lines[#lines+1] = "Scan error: " .. tostring(err) end
+    WireDiagStatus.Text = table.concat(lines, "\n")
+end, "card")
 
 local buildPage = toolkit
 local toolkitHighlights = {}
