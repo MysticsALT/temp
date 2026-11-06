@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.24 | Self-contained utility module + opt-in legacy research tests
+-- V2.25 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.24  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.25  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.24",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.25",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1659,6 +1659,63 @@ makeButton(wireArtPage, "VALIDATE WIRE ART DATA", function()
     for _, path in ipairs(paths) do points += #path end
     WireArtStatus.Text = "WIRE ART / DATA VALID\n" .. #paths .. " wire strokes / " .. points .. " points"
 end, "card")
+
+-- Design editing tools. All edits operate on normalized 0..1 paths and
+-- remain local until the user explicitly uses the placement controls.
+local wireArtUndoStack, wireArtRedoStack = {}, {}
+local function pushWireArtHistory()
+    wireArtUndoStack[#wireArtUndoStack+1] = WireArtInput.Text
+    if #wireArtUndoStack > 30 then table.remove(wireArtUndoStack, 1) end
+    table.clear(wireArtRedoStack)
+end
+local function setWireArtPaths(paths)
+    WireArtInput.Text = game:GetService("HttpService"):JSONEncode(paths)
+    clearWireArtPreview()
+    WireArtStatus.Text = "WIRE ART / DESIGN UPDATED\nPreview again to inspect changes."
+end
+local function transformWireArt(transform)
+    local paths, err = decodeWireArt()
+    if not paths then WireArtStatus.Text = "WIRE ART / " .. err; return end
+    pushWireArtHistory()
+    for _, path in ipairs(paths) do
+        for _, point in ipairs(path) do transform(point) end
+    end
+    setWireArtPaths(paths)
+end
+makeButton(wireArtPage, "MIRROR HORIZONTALLY", function()
+    transformWireArt(function(point) point[1] = 1 - point[1] end)
+end, "card")
+makeButton(wireArtPage, "FLIP VERTICALLY", function()
+    transformWireArt(function(point) point[2] = 1 - point[2] end)
+end, "card")
+makeButton(wireArtPage, "UNDO DESIGN EDIT", function()
+    if #wireArtUndoStack == 0 then WireArtStatus.Text = "WIRE ART / NOTHING TO UNDO"; return end
+    wireArtRedoStack[#wireArtRedoStack+1] = WireArtInput.Text
+    WireArtInput.Text = table.remove(wireArtUndoStack)
+    clearWireArtPreview()
+    WireArtStatus.Text = "WIRE ART / UNDO COMPLETE"
+end, "quiet")
+makeButton(wireArtPage, "REDO DESIGN EDIT", function()
+    if #wireArtRedoStack == 0 then WireArtStatus.Text = "WIRE ART / NOTHING TO REDO"; return end
+    wireArtUndoStack[#wireArtUndoStack+1] = WireArtInput.Text
+    WireArtInput.Text = table.remove(wireArtRedoStack)
+    clearWireArtPreview()
+    WireArtStatus.Text = "WIRE ART / REDO COMPLETE"
+end, "quiet")
+makeButton(wireArtPage, "EXPORT DESIGN JSON", function()
+    local paths, err = decodeWireArt()
+    if not paths then WireArtStatus.Text = "WIRE ART / " .. err; return end
+    local encoded = game:GetService("HttpService"):JSONEncode(paths)
+    WireArtInput.Text = encoded
+    local copied = false
+    if type(setclipboard) == "function" then
+        copied = pcall(setclipboard, encoded)
+    end
+    WireArtStatus.Text = copied and
+        "WIRE ART / JSON EXPORTED AND COPIED\nSave this text to reuse the design." or
+        "WIRE ART / JSON EXPORTED\nThe design JSON is in the text field; copy it to save externally."
+end, "cta")
+
 
 local wireArtPlacing = false
 makeButton(wireArtPage, "CONFIRM & PLACE PREVIEW", function()
