@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.22 | Self-contained utility module + opt-in legacy research tests
+-- V2.23 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.22  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.23  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -376,7 +376,7 @@ local function info(page, text, height, role)
         UDim2.fromOffset(13, 4), 11, role or "muted", false)
     return l
 end
-local TAB_NAMES = {"TRAVEL", "WOOD", "RARE TREES", "PLOTS", "PLAYERS", "TOOLS", "UTILS", "DUPES", "STYLE"}
+local TAB_NAMES = {"TRAVEL", "WOOD", "RARE TREES", "PLOTS", "PLAYERS", "TOOLS", "WIRE ART", "UTILS", "DUPES", "STYLE"}
 for index, name in ipairs(TAB_NAMES) do
     createPage(name)
     local tab = makeButton(TabBar, name, function()
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.22",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.23",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1487,13 +1487,14 @@ info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests 
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local toolkit = pages.TOOLS
+local wireArtPage = pages["WIRE ART"]
 --========================================================
 --========================================================
 -- WIRE ART STUDIO / PREVIEW BEFORE CONFIRMATION
 -- Preset paths are extracted from the approved Mystics cursive sign.
 --========================================================
-section(toolkit, "WIRE ART STUDIO", "Load the Mystics sign or paste custom paths. Preview them in-world, adjust position, then confirm placement.")
-local WireArtStatus = info(toolkit, "WIRE ART / NO PREVIEW\nLoad the Mystics preset or paste image-converted JSON.", 78, "text")
+section(wireArtPage, "WIRE ART STUDIO", "Load the Mystics sign or paste custom paths. Preview them in-world, adjust position, then confirm placement.")
+local WireArtStatus = info(wireArtPage, "WIRE ART / NO PREVIEW\nLoad the Mystics preset or paste image-converted JSON.", 78, "text")
 local WireArtInput = Instance.new("TextBox")
 WireArtInput.Name = "MysticsWireArtJSON"
 WireArtInput.Size = UDim2.new(1, 0, 0, 105)
@@ -1510,7 +1511,7 @@ WireArtInput.TextYAlignment = Enum.TextYAlignment.Top
 WireArtInput.TextWrapped = false
 WireArtInput.MultiLine = true
 WireArtInput.ClearTextOnFocus = false
-WireArtInput.Parent = toolkit
+WireArtInput.Parent = wireArtPage
 style(WireArtInput, "input")
 corner(WireArtInput, 10)
 stroke(WireArtInput)
@@ -1520,9 +1521,9 @@ wirePad.PaddingRight = UDim.new(0, 10)
 wirePad.PaddingTop = UDim.new(0, 8)
 wirePad.Parent = WireArtInput
 
-local WireArtWidth = makeInput(toolkit, "Artwork width in studs", "24")
-local WireArtHeight = makeInput(toolkit, "Artwork height in studs", "5.2")
-local WireArtDistance = makeInput(toolkit, "Distance in front of you (studs)", "8")
+local WireArtWidth = makeInput(wireArtPage, "Artwork width in studs", "24")
+local WireArtHeight = makeInput(wireArtPage, "Artwork height in studs", "5.2")
+local WireArtDistance = makeInput(wireArtPage, "Distance in front of you (studs)", "8")
 local MYSTICS_SIGN_PATHS = "[[[0.992,0.7091],[0.9539,0.703],[0.9238,0.6242],[0.9158,0.5636],[0.9178,0.5152],[0.9539,0.4182],[0.9559,0.3758],[0.9419,0.3212],[0.9218,0.303],[0.9078,0.3394],[0.9038,0.4121],[0.8798,0.3636],[0.8798,0.3152],[0.8878,0.2727],[0.9279,0.2667],[0.9679,0.3455],[0.978,0.4061],[0.978,0.4727],[0.9419,0.5636],[0.9379,0.6],[0.9559,0.6667],[0.9659,0.6667],[0.984,0.6242],[1.0,0.6727]],[[0.8637,0.7091],[0.8377,0.7091],[0.7896,0.5939],[0.7695,0.3939],[0.7715,0.3091],[0.7816,0.2667],[0.8156,0.2667],[0.8758,0.3758],[0.8758,0.4121],[0.8257,0.3212],[0.8116,0.3212],[0.7976,0.3758],[0.7996,0.4848],[0.8156,0.6182],[0.8277,0.6545],[0.8397,0.6606],[0.8517,0.5939],[0.8717,0.6303],[0.8717,0.6727]],[[0.7435,0.7152],[0.7275,0.7091],[0.6814,0.6242],[0.6814,0.5939],[0.7054,0.6303],[0.7114,0.6182],[0.6894,0.3394],[0.6934,0.2606],[0.7214,0.2848],[0.7635,0.3697],[0.7635,0.4],[0.7255,0.3394],[0.7174,0.3697]],[[0.5511,0.7091],[0.513,0.703],[0.483,0.6242],[0.4749,0.5636],[0.477,0.5152],[0.513,0.4182],[0.515,0.3758],[0.501,0.3212],[0.481,0.303],[0.4669,0.3394],[0.4629,0.4121],[0.4389,0.3636],[0.4389,0.3152],[0.4469,0.2727],[0.487,0.2667],[0.5271,0.3455],[0.5371,0.4061],[0.5371,0.4727],[0.501,0.5636],[0.497,0.6],[0.515,0.6667],[0.5251,0.6667],[0.5431,0.6242],[0.5591,0.6727]],[[0.4489,0.7212],[0.4168,0.6788],[0.3968,0.4182],[0.3527,0.3394],[0.3427,0.3818],[0.3667,0.7152],[0.3487,0.703],[0.3066,0.6303],[0.3046,0.6],[0.3287,0.6303],[0.3347,0.6182],[0.3146,0.3636],[0.3166,0.2727],[0.3327,0.2606],[0.3908,0.3697],[0.3928,0.3455],[0.3707,0.103],[0.3527,0.0667],[0.3186,0.0667],[0.2966,0.0848],[0.2826,0.0061],[0.3487,0.0121],[0.3667,0.0424],[0.3968,0.1394],[0.4088,0.2303]],[[0.6413,0.8182],[0.6132,0.7818],[0.6012,0.6424],[0.5812,0.6424],[0.5671,0.6121],[0.5992,0.6],[0.5812,0.3758],[0.5812,0.303],[0.5912,0.2606],[0.6112,0.2727],[0.6633,0.3879],[0.6593,0.4061],[0.6192,0.3394],[0.6092,0.3758],[0.6232,0.6],[0.6613,0.6121],[0.6733,0.6424],[0.6273,0.6485]],[[0.7515,0.9394],[0.7255,0.8848],[0.7375,0.8121],[0.7635,0.8667]],[[0.3427,0.9939],[0.3186,1.0],[0.2786,0.9333],[0.1643,0.4545],[0.1443,0.9273],[0.1323,0.897],[0.0842,0.903],[0.0641,0.8788],[0.038,0.7515],[0.018,0.6909],[0.018,0.6061],[0.0261,0.5515],[0.0521,0.6061],[0.0421,0.6909],[0.0421,0.7515],[0.0501,0.7939],[0.0741,0.8303],[0.1122,0.8303],[0.1162,0.8182],[0.0762,0.4],[0.0641,0.3576],[0.0501,0.3394],[0.016,0.3455],[0.0,0.2727],[0.0501,0.2848],[0.0802,0.3576],[0.0942,0.4303],[0.1242,0.7515],[0.1403,0.2909],[0.1583,0.3333],[0.1944,0.5273],[0.2485,0.7576],[0.2485,0.7091],[0.2104,0.2788],[0.2144,0.2606],[0.2846,0.2848],[0.2926,0.3152],[0.2605,0.3091],[0.2465,0.3455],[0.2545,0.4848],[0.2966,0.9273],[0.3006,0.9394],[0.3287,0.9333]]]"
 local wireArtPreviewParts = {}
 local wireArtPreviewFrame = nil
@@ -1642,16 +1643,16 @@ local function previewWireArt()
         .. " / Distance " .. distance .. " studs\nMove or turn, then press UPDATE PREVIEW. Confirm uses this exact preview position."
 end
 
-makeButton(toolkit, "LOAD MYSTICS CURSIVE SIGN PRESET", function()
+makeButton(wireArtPage, "LOAD MYSTICS CURSIVE SIGN PRESET", function()
     WireArtInput.Text = MYSTICS_SIGN_PATHS
     previewWireArt()
 end, "cta")
-makeButton(toolkit, "PREVIEW / UPDATE POSITION", previewWireArt, "card")
-makeButton(toolkit, "CLEAR PREVIEW", function()
+makeButton(wireArtPage, "PREVIEW / UPDATE POSITION", previewWireArt, "card")
+makeButton(wireArtPage, "CLEAR PREVIEW", function()
     clearWireArtPreview()
     WireArtStatus.Text = "WIRE ART / PREVIEW CLEARED"
 end, "quiet")
-makeButton(toolkit, "VALIDATE WIRE ART DATA", function()
+makeButton(wireArtPage, "VALIDATE WIRE ART DATA", function()
     local paths, err = decodeWireArt()
     if not paths then WireArtStatus.Text = "WIRE ART / " .. err; return end
     local points = 0
@@ -1660,7 +1661,7 @@ makeButton(toolkit, "VALIDATE WIRE ART DATA", function()
 end, "card")
 
 local wireArtPlacing = false
-makeButton(toolkit, "CONFIRM & PLACE PREVIEW", function()
+makeButton(wireArtPage, "CONFIRM & PLACE PREVIEW", function()
     if wireArtPlacing then
         WireArtStatus.Text = "WIRE ART / PLACEMENT ALREADY RUNNING"
         return
@@ -1769,13 +1770,13 @@ end, "cta")
 -- WIRE PLACEMENT DIAGNOSTICS (SAFE INCREMENTAL BUILD)
 -- This stage only inspects replicated objects; it sends no remotes.
 --========================================================
-section(toolkit, "WIRE PLACEMENT DIAGNOSTICS",
+section(wireArtPage, "WIRE PLACEMENT DIAGNOSTICS",
     "Safe diagnostic only. Checks the LT2 wire template, remote and owned wire models without placing anything.")
-local WireDiagStatus = info(toolkit,
+local WireDiagStatus = info(wireArtPage,
     "WIRE DIAGNOSTICS / NOT RUN\nPress SCAN WIRE SETUP. This does not place or consume wires.",
     76, "text")
 
-makeButton(toolkit, "SCAN WIRE SETUP", function()
+makeButton(wireArtPage, "SCAN WIRE SETUP", function()
     local lines = {"WIRE DIAGNOSTICS / RESULTS"}
     local ok, err = pcall(function()
         local replicated = game:GetService("ReplicatedStorage")
