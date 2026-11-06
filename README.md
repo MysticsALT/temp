@@ -158,3 +158,11 @@ Temporary stability note: the launcher is rolled back to the confirmed-loading v
 - Corrects the main header subtitle, footer, About section, and startup notification from stale v2.35 text to v2.36.
 - Retains the owned Wire geometry inspector.
 - Launcher pinned to LT2 commit `5eac052ae22e8e905f681ebd4696d3d3eaaeceec`.
+
+
+## v2.37 — Paginated Wire geometry output
+
+- Adds Previous/Next Geometry Page controls to the owned Wire geometry inspector.
+- Splits the summary and geometry into readable pages, four node rows per page.
+- Retains read-only behavior.
+- Launcher pinned to LT2 commit `78c5b455d427cd042331e3287cff7be3c00f0094`.
