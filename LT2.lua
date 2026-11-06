@@ -1,6 +1,6 @@
 --========================================================
 -- MYSTICS | LUMBER TYCOON 2 MODULE
--- V2.34 | Self-contained utility module + opt-in legacy research tests
+-- V2.24 | Self-contained utility module + opt-in legacy research tests
 -- No external script execution, anti-ban tampering or automatic dupe actions.
 -- Historical waypoint coordinates are reference data, NOT verified.
 --========================================================
@@ -283,7 +283,7 @@ headerGradient.Color = ColorSequence.new(theme().surface, theme().card)
 headerGradient.Parent = Header
 makeLabel(Header, "MYSTICS   /   LUMBER TYCOON 2",
     UDim2.new(1, -150, 0, 34), UDim2.fromOffset(21, 14), 20, "text", true)
-makeLabel(Header, "V2.34  •  BLOOD RED MOTION",
+makeLabel(Header, "V2.24  •  BLOOD RED MOTION",
     UDim2.new(1, -150, 0, 22), UDim2.fromOffset(22, 52), 10, "accentText", true)
 local HeaderRule = makeFrame(Header, "HeaderRule",
     UDim2.new(1, -40, 0, 2), UDim2.new(0, 20, 1, -13), "accent", 1)
@@ -438,7 +438,7 @@ local function showTab(name)
     end
 end
 local Footer = makeLabel(Main,
-    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.34",
+    "MYSTICS  •  LT2 CONTROL CENTRE   /   V2.24",
     UDim2.new(1, -34, 0, 20), UDim2.new(0, 17, 1, -28),
     9, "muted", true)
 
@@ -1476,7 +1476,7 @@ MotionToggle = makeButton(StylePage, "LOW MOTION  /  OFF", function()
         if State.lowMotion then t:Pause() else t:Play() end
     end
 end, "card")
-section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.34 • Blood Red animated interface.")
+section(StylePage, "ABOUT THIS BUILD", "Mystics LT2 V2.16 • Blood Red animated interface.")
 info(StylePage, "Mystics LT2 standalone toolkit. Experimental duplication tests remain opt-in and unverified; they can affect game saves or money. No hidden external script downloads.", 115)
 
 
@@ -1652,65 +1652,6 @@ makeButton(wireArtPage, "CLEAR PREVIEW", function()
     clearWireArtPreview()
     WireArtStatus.Text = "WIRE ART / PREVIEW CLEARED"
 end, "quiet")
-makeButton(wireArtPage, "SCAN REPLICATED STORAGE", function()
-    local ok, result = pcall(function()
-        local lines = {"WIRE TEMPLATE METADATA / READ-ONLY"}
-        local replicated = game:GetService("ReplicatedStorage")
-        local clientInfo = replicated:FindFirstChild("ClientItemInfo")
-        local wireInfo = clientInfo and clientInfo:FindFirstChild("Wire")
-        if not clientInfo then
-            lines[#lines+1] = "ClientItemInfo: MISSING"
-        elseif not wireInfo then
-            lines[#lines+1] = "ClientItemInfo found; Wire child: MISSING"
-        else
-            lines[#lines+1] = "Wire path: " .. wireInfo:GetFullName()
-            lines[#lines+1] = "Wire class: " .. wireInfo.ClassName
-            local function describe(container, label)
-                lines[#lines+1] = label .. " children:"
-                local children = container:GetChildren()
-                if #children == 0 then lines[#lines+1] = "  (none)" end
-                for index, child in ipairs(children) do
-                    if index > 60 then
-                        lines[#lines+1] = "  ... child list truncated"
-                        break
-                    end
-                    local entry = "  " .. child.Name .. " [" .. child.ClassName .. "]"
-                    if child:IsA("ValueBase") then
-                        local valueOk, value = pcall(function() return tostring(child.Value) end)
-                        if valueOk then entry = entry .. " = " .. value end
-                    end
-                    lines[#lines+1] = entry
-                    local attrs = child:GetAttributes()
-                    for key, value in pairs(attrs) do
-                        lines[#lines+1] = "    Attribute " .. key .. " = " .. tostring(value)
-                    end
-                end
-            end
-            describe(wireInfo, "Wire")
-            local other = wireInfo:FindFirstChild("OtherInfo")
-            if other then
-                lines[#lines+1] = "OtherInfo path: " .. other:GetFullName()
-                describe(other, "OtherInfo")
-            else
-                lines[#lines+1] = "Wire.OtherInfo: MISSING"
-            end
-            local maxLength = other and other:FindFirstChild("MaxLength")
-            if maxLength and maxLength:IsA("ValueBase") then
-                lines[#lines+1] = "MaxLength value: " .. tostring(maxLength.Value)
-            else
-                lines[#lines+1] = "MaxLength value object: not found"
-            end
-        end
-        lines[#lines+1] = "Read-only inspection. No placement request sent."
-        return table.concat(lines, "\n")
-    end)
-    if ok then
-        print("[Mystics Wire Art Scan]\n" .. result)
-    else
-        warn("[Mystics Wire Art Scan ERROR] " .. tostring(result))
-    end
-end, "card")
-
 makeButton(wireArtPage, "VALIDATE WIRE ART DATA", function()
     local paths, err = decodeWireArt()
     if not paths then WireArtStatus.Text = "WIRE ART / " .. err; return end
@@ -1835,6 +1776,33 @@ local WireDiagStatus = info(wireArtPage,
     "WIRE DIAGNOSTICS / NOT RUN\nPress SCAN WIRE SETUP. This does not place or consume wires.",
     76, "text")
 
+makeButton(wireArtPage, "SCAN REPLICATED STORAGE", function()
+    local lines = {"REPLICATED STORAGE / READ-ONLY"}
+    local replicated = game:GetService("ReplicatedStorage")
+    local direct = {}
+    for _, child in ipairs(replicated:GetChildren()) do
+        direct[#direct+1] = child.Name .. " [" .. child.ClassName .. "]"
+    end
+    lines[#lines+1] = "Top-level: " ..
+        (#direct > 0 and table.concat(direct, ", ") or "(none)")
+    local hits, count = {}, 0
+    for _, item in ipairs(replicated:GetDescendants()) do
+        local name = string.lower(item.Name)
+        if name == "purchasables" or name == "wireobjects"
+            or name == "wire" or name == "otherinfo" then
+            count += 1
+            if #hits < 30 then
+                hits[#hits+1] = item:GetFullName() .. " [" .. item.ClassName .. "]"
+            end
+        end
+    end
+    lines[#lines+1] = "Matching descendants (" .. count .. "):"
+    for _, hit in ipairs(hits) do lines[#lines+1] = hit end
+    if count == 0 then lines[#lines+1] = "No matching names replicated to client." end
+    lines[#lines+1] = "Read-only scan. No placement request sent."
+    WireDiagStatus.Text = table.concat(lines, "\n")
+end, "card")
+
 makeButton(wireArtPage, "SCAN WIRE SETUP", function()
     local lines = {"WIRE DIAGNOSTICS / RESULTS"}
     local ok, err = pcall(function()
@@ -1898,339 +1866,6 @@ makeButton(wireArtPage, "SCAN WIRE SETUP", function()
     end)
     if not ok then lines[#lines+1] = "Scan error: " .. tostring(err) end
     WireDiagStatus.Text = table.concat(lines, "\n")
-end, "card")
-
-
---========================================================
--- LOCAL PLOT PROXIMITY SCAN (READ-ONLY)
--- Targeted scan of PlayerModels and the local plot; avoids Workspace traversal-order truncation.
--- No remotes, inventory actions, or object changes.
---========================================================
-section(wireArtPage, "LOCAL PLOT PROXIMITY SCAN",
-    "Searches PlayerModels and your own plot directly for wire-like objects within 120 studs. Read-only.")
-local LocalWireProximityStatus = info(wireArtPage,
-    "LOCAL PLOT SCAN / NOT RUN\\nPress SCAN NEAR MY PLOT. No placement request will be sent.",
-    350, "text")
-
-makeButton(wireArtPage, "SCAN NEAR MY PLOT", function()
-    local lines = {"LOCAL PLOT PROXIMITY SCAN"}
-    local ok, err = pcall(function()
-        local properties = Workspace:FindFirstChild("Properties")
-        local ownPlot, ownOrigin = nil, nil
-        if properties then
-            for _, plot in ipairs(properties:GetChildren()) do
-                if belongsToLocal(plot) then
-                    ownPlot = plot
-                    local origin = plot:FindFirstChild("OriginSquare", true)
-                    if origin and origin:IsA("BasePart") then ownOrigin = origin.Position end
-                    break
-                end
-            end
-        end
-        lines[#lines+1] = "Local player: " .. LocalPlayer.Name
-        lines[#lines+1] = "Local plot: " .. (ownPlot and ownPlot:GetFullName() or "NOT FOUND")
-        if not ownOrigin then
-            lines[#lines+1] = "OriginSquare: NOT FOUND"
-            LocalWireProximityStatus.Text = table.concat(lines, "\\n")
-            return
-        end
-        lines[#lines+1] = "OriginSquare: " .. tostring(ownOrigin)
-
-        local playerModels = Workspace:FindFirstChild("PlayerModels")
-        lines[#lines+1] = "PlayerModels: " .. (playerModels and "FOUND" or "MISSING")
-        local candidates, seen = {}, {}
-        local stats = {playerRoots = 0, playerModels = 0, plotModels = 0, structural = 0, named = 0}
-
-        local function scanModel(model, source)
-            if not model or not model:IsA("Model") or seen[model] then return end
-            seen[model] = true
-            if source == "PlayerModels" then stats.playerModels += 1 end
-            if source == "LocalPlot" then stats.plotModels += 1 end
-
-            local itemName = model:FindFirstChild("ItemName", true)
-            local purchased = model:FindFirstChild("PurchasedBoxItemName", true)
-            local typeValue = model:FindFirstChild("Type", true)
-            local function containsWire(valueObject)
-                return valueObject and valueObject:IsA("ValueBase")
-                    and string.find(string.lower(tostring(valueObject.Value)), "wire", 1, true) ~= nil
-            end
-            local lowerName = string.lower(model.Name)
-            local namedWire = string.find(lowerName, "wire", 1, true) ~= nil
-                or containsWire(itemName) or containsWire(purchased) or containsWire(typeValue)
-            local end1 = model:FindFirstChild("End1", true)
-            local end2 = model:FindFirstChild("End2", true)
-            local linePart = model:FindFirstChild("Line", true)
-            local structuralWire = end1 ~= nil and end2 ~= nil and linePart ~= nil
-            if namedWire then stats.named += 1 end
-            if structuralWire then stats.structural += 1 end
-
-            if namedWire or structuralWire then
-                local okPivot, pivot = pcall(function() return model:GetPivot() end)
-                local position = okPivot and pivot and pivot.Position or nil
-                if not position then
-                    local part = model:FindFirstChildWhichIsA("BasePart", true)
-                    position = part and part.Position or nil
-                end
-                if position then
-                    local distance = (position - ownOrigin).Magnitude
-                    if distance <= 120 then
-                        local owner = model:FindFirstChild("Owner", true)
-                        local ownerValue = owner and owner:IsA("ValueBase") and tostring(owner.Value) or "unknown"
-                        local parts, partCount = {}, 0
-                        for _, desc in ipairs(model:GetDescendants()) do
-                            if desc:IsA("BasePart") then
-                                partCount += 1
-                                if #parts < 4 then parts[#parts+1] = desc.Name end
-                            end
-                        end
-                        candidates[#candidates+1] = {
-                            distance = distance,
-                            path = model:GetFullName(),
-                            owner = ownerValue,
-                            name = model.Name,
-                            source = source,
-                            parts = partCount,
-                            partNames = table.concat(parts, ", "),
-                            item = itemName and tostring(itemName.Value) or "-",
-                            purchased = purchased and tostring(purchased.Value) or "-",
-                            typeName = typeValue and tostring(typeValue.Value) or "-",
-                            structure = structuralWire
-                        }
-                    end
-                end
-            end
-        end
-
-        if playerModels then
-            local roots = playerModels:GetChildren()
-            stats.playerRoots = #roots
-            for _, root in ipairs(roots) do
-                if root:IsA("Model") then
-                    scanModel(root, "PlayerModels")
-                else
-                    for _, desc in ipairs(root:GetDescendants()) do
-                        if desc:IsA("Model") then scanModel(desc, "PlayerModels") end
-                    end
-                end
-            end
-        end
-        if ownPlot then
-            for _, desc in ipairs(ownPlot:GetDescendants()) do
-                if desc:IsA("Model") then scanModel(desc, "LocalPlot") end
-            end
-        end
-
-        table.sort(candidates, function(a,b) return a.distance < b.distance end)
-        lines[#lines+1] = "PlayerModels top-level entries: " .. stats.playerRoots
-        lines[#lines+1] = "PlayerModels models checked: " .. stats.playerModels
-        lines[#lines+1] = "Local plot models checked: " .. stats.plotModels
-        lines[#lines+1] = "Wire identity matches: " .. stats.named
-        lines[#lines+1] = "End1/End2/Line structures: " .. stats.structural
-        lines[#lines+1] = "Wire-like models within 120 studs: " .. #candidates
-        if #candidates == 0 then
-            lines[#lines+1] = "No nearby match in PlayerModels or the local plot. The placed item may use another container or not be a Model."
-        else
-            for i, match in ipairs(candidates) do
-                if i > 12 then
-                    lines[#lines+1] = "... " .. (#candidates - 12) .. " more nearby matches omitted"
-                    break
-                end
-                lines[#lines+1] = string.format("%.1f studs | %s | %s | owner %s | parts %d",
-                    match.distance, match.source, match.path, match.owner, match.parts)
-                lines[#lines+1] = "  ItemName=" .. match.item .. " / PurchasedBoxItemName=" .. match.purchased .. " / Type=" .. match.typeName
-                lines[#lines+1] = "  Parts: " .. match.partNames .. " / structural=" .. tostring(match.structure)
-            end
-        end
-        lines[#lines+1] = "READ-ONLY. No placement request sent."
-    end)
-    if not ok then lines[#lines+1] = "Proximity scan error: " .. tostring(err) end
-    LocalWireProximityStatus.Text = table.concat(lines, "\\n")
-end, "card")
-
--- CLIENT ITEM INFO / WIRE INSPECTOR (READ-ONLY)
--- Prioritizes actual Workspace.PlayerModels before optional replicated-name details.
--- Does not invoke remotes, move objects, or consume items.
---========================================================
-section(wireArtPage, "CLIENT ITEM INFO / WIRE INSPECTOR",
-    "Read-only inspection. Prioritizes actual placed Wire models and ownership so the useful results stay visible.")
-local WireItemInspectStatus = info(wireArtPage,
-    "WIRE ITEM INSPECTOR / NOT RUN\\nPress INSPECT CLIENT ITEM INFO. No placement request will be sent.",
-    350, "text")
-
-makeButton(wireArtPage, "INSPECT CLIENT ITEM INFO", function()
-    local lines = {"CLIENT ITEM INFO / WIRE INSPECTION"}
-    local ok, err = pcall(function()
-        local replicated = game:GetService("ReplicatedStorage")
-        local clientInfo = replicated:FindFirstChild("ClientItemInfo")
-        local wire = clientInfo and clientInfo:FindFirstChild("Wire")
-        local otherInfo = wire and wire:FindFirstChild("OtherInfo")
-        lines[#lines+1] = "Definition: " .. (wire and wire:GetFullName() or "ClientItemInfo.Wire MISSING")
-
-        local function valueText(obj)
-            if obj and obj:IsA("ValueBase") then
-                local okValue, value = pcall(function() return tostring(obj.Value) end)
-                if okValue then return value end
-            end
-            return nil
-        end
-
-        if otherInfo then
-            local fields = {}
-            for _, child in ipairs(otherInfo:GetChildren()) do
-                local value = valueText(child)
-                if value ~= nil then fields[#fields+1] = child.Name .. "=" .. value end
-            end
-            lines[#lines+1] = "Wire metadata: " .. (#fields > 0 and table.concat(fields, ", ") or "no ValueBase fields")
-        else
-            lines[#lines+1] = "Wire.OtherInfo: MISSING"
-        end
-
-        -- Inspect the actual world models first. Search each top-level item and
-        -- its descendants for Wire identity and ownership metadata.
-        local playerModels = Workspace:FindFirstChild("PlayerModels")
-        local candidates, inspected, ownerCounts = {}, 0, {}
-        if playerModels then
-            for _, item in ipairs(playerModels:GetChildren()) do
-                inspected += 1
-                if inspected > 2000 then break end
-                local itemName = item:FindFirstChild("ItemName", true)
-                local purchased = item:FindFirstChild("PurchasedBoxItemName", true)
-                local typeValue = item:FindFirstChild("Type", true)
-                local identity = string.lower(item.Name)
-                local isWire = identity:find("wire", 1, true) ~= nil
-                    or (itemName and string.lower(tostring(itemName.Value)):find("wire", 1, true) ~= nil)
-                    or (purchased and string.lower(tostring(purchased.Value)):find("wire", 1, true) ~= nil)
-                    or (typeValue and string.lower(tostring(typeValue.Value)):find("wire", 1, true) ~= nil)
-                if isWire then
-                    local owner = item:FindFirstChild("Owner", true)
-                    local ownerRaw = owner and tostring(owner.Value) or "Owner missing"
-                    local ownerMatches = owner and (
-                        owner.Value == LocalPlayer
-                        or ownerRaw == LocalPlayer.Name
-                        or ownerRaw == tostring(LocalPlayer.UserId)
-                    )
-                    local ownerText = owner and (ownerMatches and "MATCHES LOCAL PLAYER" or ownerRaw) or "Owner missing"
-                    local ownerClass = owner and owner.ClassName or "none"
-                    local kind = item.ClassName
-                    local parts, partCount = {}, 0
-                    for _, desc in ipairs(item:GetDescendants()) do
-                        if desc:IsA("BasePart") then
-                            partCount += 1
-                            if #parts < 3 then parts[#parts+1] = desc.Name end
-                        end
-                    end
-                    local ownerKey = owner and ownerRaw or "Owner missing"
-                    ownerCounts[ownerKey] = (ownerCounts[ownerKey] or 0) + 1
-                    local label = item.Name .. " [" .. kind .. "] / owner: " .. ownerText
-                        .. " [" .. ownerClass .. "] / parts: " .. partCount
-                    if itemName then label = label .. " / ItemName=" .. tostring(itemName.Value) end
-                    if purchased then label = label .. " / PurchasedBoxItemName=" .. tostring(purchased.Value) end
-                    if typeValue then label = label .. " / Type=" .. tostring(typeValue.Value) end
-                    if #parts > 0 then label = label .. " / parts: " .. table.concat(parts, ", ") end
-                    candidates[#candidates+1] = {label = label, localMatch = ownerMatches == true, owner = ownerKey, model = item}
-                end
-            end
-        end
-        -- Find the local plot using the same ownership helper as the PLOTS tab.
-        local ownPlot, ownOrigin = nil, nil
-        local properties = Workspace:FindFirstChild("Properties")
-        if properties then
-            for _, plot in ipairs(properties:GetChildren()) do
-                if belongsToLocal(plot) then
-                    ownPlot = plot
-                    local origin = plot:FindFirstChild("OriginSquare", true)
-                    if origin and origin:IsA("BasePart") then ownOrigin = origin.Position end
-                    break
-                end
-            end
-        end
-
-        -- Measure detected Wire model pivots against the local plot origin.
-        -- This is diagnostic only: it does not change or claim ownership.
-        local nearby = {}
-        if ownOrigin then
-            for _, entry in ipairs(candidates) do
-                local model = entry.model
-                if model and model.Parent then
-                    local okPivot, pivot = pcall(function()
-                        if model:IsA("Model") then return model:GetPivot() end
-                        if model:IsA("BasePart") then return model.CFrame end
-                        return nil
-                    end)
-                    if okPivot and pivot then
-                        entry.distance = (pivot.Position - ownOrigin).Magnitude
-                        nearby[#nearby+1] = entry
-                    end
-                end
-            end
-            table.sort(nearby, function(a,b) return a.distance < b.distance end)
-        end
-
-        lines[#lines+1] = "Local player: " .. LocalPlayer.Name .. " / UserId: " .. tostring(LocalPlayer.UserId)
-        lines[#lines+1] = "Local plot: " .. (ownPlot and ownPlot:GetFullName() or "NOT FOUND")
-        lines[#lines+1] = "Plot origin: " .. (ownOrigin and tostring(ownOrigin) or "UNAVAILABLE")
-        lines[#lines+1] = "PlayerModels: " .. (playerModels and ("FOUND / " .. inspected .. " top-level items checked") or "MISSING")
-        local localCount = 0
-        for _, entry in ipairs(candidates) do
-            if entry.localMatch then localCount += 1 end
-        end
-        table.sort(candidates, function(a, b)
-            if a.localMatch ~= b.localMatch then return a.localMatch end
-            return a.owner < b.owner
-        end)
-        lines[#lines+1] = "Wire-like placed models: " .. #candidates .. " / local-owner matches: " .. localCount
-        if #candidates == 0 then
-            lines[#lines+1] = "  None detected. Place a normal Wire on your plot, then scan again."
-        else
-            local ownerSummary = {}
-            for ownerName, count in pairs(ownerCounts) do
-                ownerSummary[#ownerSummary+1] = ownerName .. "=" .. count
-            end
-            table.sort(ownerSummary)
-            lines[#lines+1] = "Owner counts: " .. table.concat(ownerSummary, ", ")
-            for i, entry in ipairs(candidates) do
-                if i > 10 then
-                    lines[#lines+1] = "  ... " .. (#candidates - 10) .. " more model(s) not displayed"
-                    break
-                end
-                lines[#lines+1] = "  " .. entry.label
-            end
-        end
-
-        -- A short, secondary list of similarly named replicated objects.
-        local placeFolder = replicated:FindFirstChild("PlaceStructure")
-        local wireRemote = placeFolder and placeFolder:FindFirstChild("ClientPlacedWire")
-        local serverBindable = placeFolder and placeFolder:FindFirstChild("ClientPlacedWireServerServer")
-        lines[#lines+1] = "Wire models with position: " .. #nearby
-        if #nearby > 0 then
-            lines[#lines+1] = "Nearest Wire models to your plot origin:"
-            for i, entry in ipairs(nearby) do
-                if i > 8 then break end
-                lines[#lines+1] = string.format("  %.1f studs / %s / owner %s",
-                    entry.distance, entry.model.Name, entry.owner)
-            end
-        elseif not ownOrigin then
-            lines[#lines+1] = "Cannot measure distance: local plot OriginSquare unavailable."
-        else
-            lines[#lines+1] = "No detected Wire models could be positioned relative to your plot."
-        end
-
-                lines[#lines+1] = "ClientPlacedWire: " .. (wireRemote and wireRemote.ClassName or "MISSING")
-        lines[#lines+1] = "ClientPlacedWireServerServer: " .. (serverBindable and serverBindable.ClassName or "MISSING")
-
-        local wireNamed = {}
-        for _, obj in ipairs(replicated:GetDescendants()) do
-            if string.lower(obj.Name):find("wire", 1, true) and obj ~= wire then
-                wireNamed[#wireNamed+1] = obj:GetFullName() .. " [" .. obj.ClassName .. "]"
-                if #wireNamed >= 6 then break end
-            end
-        end
-        lines[#lines+1] = "Other replicated Wire objects (max 6):"
-        for _, entry in ipairs(wireNamed) do lines[#lines+1] = "  " .. entry end
-        lines[#lines+1] = "READ-ONLY. No placement request sent."
-    end)
-    if not ok then lines[#lines+1] = "Inspector error: " .. tostring(err) end
-    WireItemInspectStatus.Text = table.concat(lines, "\\n")
 end, "card")
 
 local buildPage = toolkit
@@ -3423,4 +3058,4 @@ showTab("TRAVEL")
 refreshWorld()
 refreshWood()
 scanPlots()
-notify("Mystics LT2 v2.34 ready. Wire Art storage scanner enabled.")
+notify("Mystics LT2 v2.18 ready. Historical waypoints are unverified.")
