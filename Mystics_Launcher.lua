@@ -633,7 +633,7 @@ local function LaunchLT2()
     task.spawn(function()
         local ok, errorMessage = pcall(function()
             -- Commit-pinned loading avoids silently changing module contents.
-            local lt2ModuleCommit = "c21815be14208d3e12ef0946f1663efb58ade4af"
+            local lt2ModuleCommit = "3a9e174b1af115d3b80a83e3730ee2ca497a1ef9"
             local lt2Url = "https://raw.githubusercontent.com/MysticsALT/temp/"
                 .. lt2ModuleCommit .. "/LT2.lua"
             if type(loadstring) ~= "function" then
@@ -651,7 +651,7 @@ local function LaunchLT2()
             end
             local sourceLength = #source
             local hasMarker = string.find(source, "MYSTICS | LUMBER TYCOON 2 MODULE", 1, true) ~= nil
-            local hasVersion = string.find(source, "V2.30 | Self-contained", 1, true) ~= nil
+            local hasVersion = string.find(source, "V2.31 | Self-contained", 1, true) ~= nil
             if sourceLength < 8000 then
                 error("LT2 download too short: " .. sourceLength .. " characters. Check executor HTTP response.")
             end
@@ -659,7 +659,7 @@ local function LaunchLT2()
                 error("LT2 download missing module marker; received " .. sourceLength .. " characters. Response may be an HTML error page or truncated.")
             end
             if not hasVersion then
-                error("LT2 download has the module marker but not version V2.30; received " .. sourceLength .. " characters.")
+                error("LT2 download has the module marker but not version V2.31; received " .. sourceLength .. " characters.")
             end
             local chunk, compileError = loadstring(source, "Mystics_LT2")
             if type(chunk) ~= "function" then
